@@ -30,3 +30,26 @@ I just wanted to let you know I have this and am giving it some thought. I’m a
 
 I intend to keep mulling this over and will try to formulate a response for you next week, but I am really slammed, so you have my full permission to bug me if you don’t hear back. 
 
+### Rosi Dagit 4/18
+
+Will call
+
+### Christine Medak, 4/20
+
+Here is a response to your questions:
+
+•	What regulatory or management decisions do you anticipate would benefit from the results of this project on climate induced changes in flow and temperature on stream/riparian species?
+
+The effects of climate change-related changes on water flow and temperature can be used as a surrogate for evaluating effects of human induced changes to water flow and temperature (e.g., reductions in wastewater discharges, increases in natural flow diversions...). Some questions we might ask: Will proposed changes in the magnitude, timing, and/or distribution of flows impact the productivity of the vireo or Santa Ana sucker in the project area? Are there management options available to emulate natural processes in the absence of sufficient environmental flows (i.e., thinning out canopy trees, importing spawning gravel)? 
+
+•	What sources of uncertainty are of most concern to your decision making process (e.g. climate projections, water management, species occurrence, future invasions, etc.)?
+
+We understand, generally, that natural stream processes (e.g., sediment transport, scour, deposition...) are important for maintaining suitable aquatic and riparian habitat conditions for native species and we have a good understanding of species habitat needs but we don't have a good understanding of minimum base flows/subsurface flows and the frequency and magnitude of storm flows that are necessary to maintain suitable habitat. For example, the timing and magnitude of surface flows and/or groundwater necessary to maintain a structurally diverse riparian woodland (including understory, shrub and canopy layers) for the vireo are not well understood. Consultants often project only a fraction of the available water is necessary to support the habitat but there is little data available to support their projections. We would be interested in the development of monitoring programs for evaluating habitat response to changes in the hydrograph.
+
+•	What types of data/information output would be most beneficial to your work (e.g. raw data queries, graphs and plots that can be manipulated, interactive maps)?  -- please provide your top TWO choices.
+
+Graphs (e.g., daily cfs, daily temperature) that are representative of the natural hydrograph in the LA Basin area and within different stream orders would be very helpful for comparison with anticipated changes to the hydrograph. It would also be helpful to understand the origin of data used to generate specific model outputs (maybe have a clickable link to source information). Often I have seen data presented as monthly or annual water available (in AF). This is not helpful for understanding the magnitude and frequency of flows necessary to maintain habitat.
+
+Let me know if you are looking for more specific examples of projects or information needs that we have.
+
+
