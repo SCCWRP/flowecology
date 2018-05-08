@@ -52,4 +52,16 @@ Graphs (e.g., daily cfs, daily temperature) that are representative of the natur
 
 Let me know if you are looking for more specific examples of projects or information needs that we have.
 
+### Jennifer Pareti 5/8
+
+Hi Marcus,
+I apologize for the delay in getting back to you. Here is my feedback on the points that you listed:
+
+•	What regulatory or management decisions do you anticipate would benefit from the results of this project on climate induced changes in flow and temperature on stream/riparian species? Understanding habitat changes as it relates to quantity of available habitat for fish – identifying areas within streams likely to go dry/locations of persistent water. 
+•	What sources of uncertainty are of most concern to your decision making process (e.g. climate projections, water management, species occurrence, future invasions, etc.)? Water availability in persistent drought. Lack of scour in streams from fewer/weaker storm events. 
+•	What types of data/information output would be most beneficial to your work (e.g. raw data queries, graphs and plots that can be manipulated, interactive maps)?  -- please provide your top TWO choices. Interactive maps, graphs and plots that can be manipulated.
+
+Thank you,
+Jennifer 
+
 
