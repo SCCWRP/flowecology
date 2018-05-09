@@ -93,3 +93,16 @@ I apologize for the delay in getting back to you. Here is my feedback on the poi
 
 Thank you,
 Jennifer 
+
+### Kyle Evans (via Mary Larson) 5/9
+
+Good morning Marcus,
+
+I was asked by my supervisor Mary Larson to provide a bit of feedback for this project. I have ccd another CDFW biologist, Dana McCanne, on this email so he may provide any additional comments as he sees fit.  I am a big fan of interactive maps for data visualization like the ones linked in your previous email. When it comes to riparian species (partially occurrence) there exists a large amount of spatially available data through CDFW BIOS and CalFlora. This is also the case with predictions in sea level rise (Ventura County is working on a large sea level rise project at the moment) and general trends in temperature and rainfall for southern California in the face of climate change. 
+
+I see the largest benefit of a project like this for my work would be highlighting potential areas of refugia or high quality habitat. By that I mean areas that may maintain cooler stream temperatures, summer base flows, and riparian cover in the face of predicted climate change models. These areas can then be overlaid with species occurrence available in BIOS or Calflora.  I agree with you though that the greatest level of uncertainty at this point for riparian streams may be changes in water management and water policy.
+
+For the data/information output I would prefer interactive maps in addition to raw data queries. Interactive maps provides that large scale spatial view of what data is available (or unavailable in many cases) and may help direct management decisions as it may highlight areas with a high risk of significant change due to climate change impacts. Moving away from the large scale spatial side I would also like the raw data queries. I think it’s important that we are able to run our own analysis and be able to see what data is being used in the model. I’m excited to see this project develop as this may help guide our future data collection and monitoring work to fill knowledge gaps highlighted here.  
+ 
+Kyle
+
