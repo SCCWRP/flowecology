@@ -30,9 +30,23 @@ I just wanted to let you know I have this and am giving it some thought. I’m a
 
 I intend to keep mulling this over and will try to formulate a response for you next week, but I am really slammed, so you have my full permission to bug me if you don’t hear back. 
 
-### Rosi Dagit 4/18
+### Rosi Dagit 4/18 (phone call)
 
-Will call
+Some key points from a phone call: 
+
+* Resource conservation district of Santa Monica Mountains
+
+* desire for retrieving info from app - maps, data, summary plots, etc. to support project initiatives
+
+* ability to extract raw data
+
+* links between surface flow, connectivity and effects on bio, e.g. change in upstream flow propagates to upstream incursions of salinity, what does this do to habitat, species suitability ranges, etc., effects of fragmentation
+
+* fright maps - best/worst case modelling scenarios and changes in species dists
+
+* USGS Nathan Holste conducting similar modeling in LA river
+
+* Wetlands Recovery Project - Shawn Kelly working with others to build similar apps
 
 ### Christine Medak, 4/20
 
