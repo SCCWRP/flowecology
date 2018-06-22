@@ -4,7 +4,22 @@ output:
     keep_md: true
 ---
 
-![](emails_files/figure-html/unnamed-chunk-1-1.png)<!-- -->
+```{r, warning = F, message = F, echo = F}
+library(tm)
+library(wordcloud)
+library(tidyverse)
+library(SnowballC)
+
+jeopCorpus <- readLines('emails.md') %>% 
+  VectorSource %>% 
+  Corpus
+
+jeopCorpus <- tm_map(jeopCorpus, removePunctuation)
+jeopCorpus <- tm_map(jeopCorpus, removeWords, stopwords('english'))
+jeopCorpus <- tm_map(jeopCorpus, stemDocument)
+
+wordcloud(jeopCorpus, max.words = 50, random.order = FALSE)
+```
 
 
 ## Initial emails
