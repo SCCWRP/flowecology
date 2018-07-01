@@ -8,4 +8,209 @@ runtime: shiny
 
 ## Biological data
 
-Informative text
+```{r setup, include = FALSE}
+# globals
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F)
+
+library(tidyverse)
+library(sf)
+library(mapview)
+library(plotly)
+library(shiny)
+library(leaflet)
+library(kableExtra)
+
+prj <- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
+
+source('R/funcs.R')
+
+data(biodat)
+data(rchdat)
+```
+
+This map shows the stream network and locations with biological data.  Select a species to view locations and tabular information of where and when the species was observed.
+
+```{r mapinp}
+# select species to show
+selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
+```
+
+```{r reactives}
+# species data to plot, table
+sprct <- reactive({
+  
+  # input
+  spmap <- input$spmap
+  
+  out <- biodat %>% 
+    filter(name %in% spmap)
+  
+  return(out)
+  
+})
+
+# map of species data
+spmap <- reactive({
+  
+  # input
+  sprct <- sprct()
+
+  # get colors, pt size
+  occol <- sprct$occol
+  occex <- sprct$occex
+  
+  # remove irrelevant columns
+  tomap <- sprct %>% 
+    select(-occol, -occex, -FID_1)
+
+  out <- mapview(rchdat, homebutton = F, color = 'grey') + 
+    mapview(tomap, zcol = 'occurrence', col.region = occol, cex = occex, legend = T, homebutton = F, layer = 'occurrence')
+ 
+  return(out)
+ 
+})
+
+# get number of sites sampled by year for a species
+yrsmp <- reactive({
+  
+  # input
+  sprct <- sprct()
+  st_geometry(sprct) <- NULL
+
+  # full year range
+  yrs <- range(sprct$yr, na.rm = T)
+  yrs <- seq(yrs[1], yrs[2])
+  yrs <- data.frame(yr = yrs)
+  
+  # summarize  
+  out <- sprct %>%
+    select(name, yr, FID_1) %>% 
+    na.omit %>% 
+    unique %>% 
+    group_by(yr) %>% 
+    mutate(count = n()) %>% 
+    ungroup %>% 
+    select(yr, count) %>% 
+    unique %>% 
+    left_join(yrs, ., by = 'yr') %>% 
+    tidyr::complete(yr)
+  
+  return(out)
+  
+})
+# get number of sites where species was present/absent complete cases
+yrcnt <- reactive({
+  
+  # input
+  sprct <- sprct()
+  st_geometry(sprct) <- NULL
+  
+  # full year range, by occurrence
+  yrs <- range(sprct$yr, na.rm = T)
+  yrs <- seq(yrs[1], yrs[2])
+  yrs <- crossing(
+    yr = yrs, 
+    occurrence = c('present', 'absent')
+  )
+
+  # summarize
+  out <- sprct %>%
+    select(name, yr, occurrence) %>% 
+    na.omit %>% 
+    group_by(yr, occurrence) %>% 
+    summarise(count = n()) %>% 
+    ungroup %>% 
+    left_join(yrs, ., by = c('yr', 'occurrence')) %>% 
+    tidyr::complete(yr, occurrence)
+  
+  return(out)
+  
+})
+```
+
+```{r spmap}
+output$spmap = renderLeaflet({spmap()@map})
+leafletOutput('spmap', height = 500)
+```
+
+<br></br>
+Counts of presence/absence by year for `r renderText(input$spmap)`:
+```{r yrcnt, out.width = "100%"}
+renderPlot({
+
+  # inputs
+  yrcnt <- yrcnt()
+  
+  out <- ggplot(yrcnt, aes(x = yr, group = occurrence, fill = occurrence, y = count)) + 
+    geom_line() +
+    geom_point(pch = 21, size = 5) +
+    theme_bw(base_size = 16) +
+    theme(
+      axis.title.x = element_blank(), 
+      axis.text.x = element_text(angle = 45, hjust = 1), 
+      legend.position = 'top', 
+      legend.title = element_blank()
+    ) + 
+    scale_fill_manual(values = c('tomato1', 'lightgreen')) +
+    scale_y_continuous('Number of locations') + 
+    scale_x_continuous(breaks = unique(yrcnt$yr))
+  
+  return(out)
+
+})
+```
+
+Number of locations sampled by year for `r renderText(input$spmap)`:
+```{r yrsmp, out.width = "100%"}
+renderPlot({
+
+  # inputs
+  yrsmp <- yrsmp()
+
+  out <- ggplot(yrsmp, aes(x = yr, y = count)) + 
+    geom_line(colour = 'black') +
+    geom_point(pch = 21, size = 5, fill = 'grey') +
+    theme_bw(base_size = 16) +
+    theme(
+      axis.title.x = element_blank(), 
+      axis.text.x = element_text(angle = 45, hjust = 1), 
+      legend.position = 'top', 
+      legend.title = element_blank()
+    ) + 
+    scale_y_continuous('Number of locations') + 
+    scale_x_continuous(breaks = unique(yrsmp$yr))
+  
+  return(out)
+
+})
+```
+
+<!-- Select a year and size class to view on the map: -->
+
+<!-- ```{r mapviewsel} -->
+
+<!-- selectInput("cls", "Choose density (S1: yoy, S2: adult):", c('Dens_S1', 'Dens_S2')) -->
+
+<!-- selectInput("yr", "Choose a year to plot:", fishdat$Year %>% unique %>% na.omit) -->
+<!-- ``` -->
+<!-- ```{r} -->
+
+<!-- mapout <- reactive({ -->
+
+<!--   toplo <- fishdat %>%  -->
+<!--     filter(Year %in% input$yr) -->
+
+<!--   out <- mapview(stream, label = stream$STREAM_NM) + -->
+<!--     mapview(toplo, zcol = 'Watershed', cex = input$cls, legend = T) -->
+
+<!--   return(out) -->
+
+<!-- }) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- renderLeaflet({mapout()@map}) -->
+<!-- ``` -->
+
+<!-- <br></br> -->
+
