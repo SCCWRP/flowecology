@@ -31,6 +31,8 @@ data(rchdat)
 
 This map shows the stream network and locations with biological data.  Select a species to view locations and tabular information of where and when the species was observed.
 
+Add selector for source
+
 ```{r mapinp}
 # select species to show
 selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
@@ -186,31 +188,7 @@ renderPlot({
 })
 ```
 
-<!-- Select a year and size class to view on the map: -->
+Tabular summary
 
-<!-- ```{r mapviewsel} -->
-
-<!-- selectInput("cls", "Choose density (S1: yoy, S2: adult):", c('Dens_S1', 'Dens_S2')) -->
-
-<!-- selectInput("yr", "Choose a year to plot:", fishdat$Year %>% unique %>% na.omit) -->
-<!-- ``` -->
-<!-- ```{r} -->
-
-<!-- mapout <- reactive({ -->
-
-<!--   toplo <- fishdat %>%  -->
-<!--     filter(Year %in% input$yr) -->
-
-<!--   out <- mapview(stream, label = stream$STREAM_NM) + -->
-<!--     mapview(toplo, zcol = 'Watershed', cex = input$cls, legend = T) -->
-
-<!--   return(out) -->
-
-<!-- }) -->
-<!-- ``` -->
-<!-- ```{r} -->
-<!-- renderLeaflet({mapout()@map}) -->
-<!-- ``` -->
-
-<!-- <br></br> -->
+Downloads
 
