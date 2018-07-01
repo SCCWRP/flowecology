@@ -1,0 +1,19 @@
+name: ""
+navbar:
+  title: ""
+  left:
+    - text: "Home"
+      href: index.Rmd
+    - text: "Biological data"
+      href:  biology.Rmd
+    - text: "Modelled flow data"
+      href: flow.Rmd
+    - text: "Biological response to flow"
+      href: biologyflow.Rmd
+output_dir: "."
+output:
+  html_document:
+    theme: yeti
+    css: styles.css
+  runtime: shiny
+    
