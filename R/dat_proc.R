@@ -9,11 +9,12 @@ biodat <- st_read('//172.16.1.5/Data/JennyTaylor/Data Visualization/Species_NHD.
 biodat <- biodat %>% 
   dplyr::select(FID_1, date, name, occurrence, source) %>% 
   mutate(
+    date = ifelse(date == as.Date('2028-07-07'), as.Date('2018-07-07'), date),
+    date = as.Date(date, origin = "1970-01-01"),
     yr = year(date), 
-    yr = ifelse(yr == 2028, 2018, yr),
     mo = month(date),
     occurrence = factor(occurrence, levels = c(0, 1), labels = c('absent', 'present')),
-    occol = ifelse(occurrence == 'present', 'lightgreen', 'tomato1'),
+    occol = ifelse(occurrence == 'present', 'lightgreen', 'tom ato1'),
     occex = ifelse(occurrence == 'present', 7, 3)
   )
 save(biodat, file = 'data/biodat.RData', compress = 'xz')

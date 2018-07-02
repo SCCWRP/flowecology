@@ -29,26 +29,71 @@ data(biodat)
 data(rchdat)
 ```
 
+```{r mastinp}
+column(width = 12,
+
+       column(width = 6, 
+              
+              # select species to show
+              selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
+              
+       ), 
+       
+       column(width = 6, 
+              
+              # year slider
+              sliderInput("yearssh", label = 'Select year ranges to show:',  
+                min = 1983, max = 2018, 
+                value = c(1983, 2018),
+                sep = '', ticks = FALSE
+              )
+
+        )
+       
+)
+```
+
 This map shows the stream network and locations with biological data.  Select a species to view locations and tabular information of where and when the species was observed.
 
 Add selector for source
 
-```{r mapinp}
-# select species to show
-selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
-```
-
 ```{r reactives}
-# species data to plot, table
+# species data to plot
 sprct <- reactive({
   
   # input
   spmap <- input$spmap
+  yearssh <- input$yearssh
   
   out <- biodat %>% 
-    filter(name %in% spmap)
+    filter(name %in% spmap) %>% 
+    filter(yr >= yearssh[1] & yr <= yearssh[2])
   
   return(out)
+  
+})
+
+# species data for table, from sprct
+sprcttab <- reactive({
+  
+  # input
+  sprct <- sprct()
+  
+  # get coordinates, remove from obj
+  crds <- st_coordinates(sprct) %>% 
+    data.frame
+  st_geometry(sprct) <- NULL
+
+  # format for table
+  sprcttab <- sprct %>%
+    mutate(
+      date = as.character(date), 
+      latitude = crds$Y,
+      longitude = crds$X
+      ) %>% 
+    dplyr::select(FID_1, latitude, longitude, date, occurrence, source)
+    
+  return(sprcttab)
   
 })
 
@@ -101,6 +146,7 @@ yrsmp <- reactive({
   return(out)
   
 })
+
 # get number of sites where species was present/absent complete cases
 yrcnt <- reactive({
   
@@ -137,58 +183,91 @@ leafletOutput('spmap', height = 500)
 ```
 
 <br></br>
-Counts of presence/absence by year for `r renderText(input$spmap)`:
-```{r yrcnt, out.width = "100%"}
+
+Number of sites sampled by year for `r renderText(input$spmap)`, `r renderText(input$yearssh[1])` to `r renderText(input$yearssh[2])`:
+
+```{r ploinp}
+# select plot type to show
+selectInput("ploinp", "Select plot type to show:", 
+  choices = c(
+    'Presence/absence site counts' = 'pa',
+    'Total site counts' = 'tot'
+    )
+)
+```
+
+```{r plosit, out.width = "100%"}
 renderPlot({
 
   # inputs
+  ploinp <- input$ploinp
   yrcnt <- yrcnt()
-  
-  out <- ggplot(yrcnt, aes(x = yr, group = occurrence, fill = occurrence, y = count)) + 
-    geom_line() +
-    geom_point(pch = 21, size = 5) +
-    theme_bw(base_size = 16) +
-    theme(
-      axis.title.x = element_blank(), 
-      axis.text.x = element_text(angle = 45, hjust = 1), 
-      legend.position = 'top', 
-      legend.title = element_blank()
-    ) + 
-    scale_fill_manual(values = c('tomato1', 'lightgreen')) +
-    scale_y_continuous('Number of locations') + 
-    scale_x_continuous(breaks = unique(yrcnt$yr))
-  
-  return(out)
-
-})
-```
-
-Number of locations sampled by year for `r renderText(input$spmap)`:
-```{r yrsmp, out.width = "100%"}
-renderPlot({
-
-  # inputs
   yrsmp <- yrsmp()
-
-  out <- ggplot(yrsmp, aes(x = yr, y = count)) + 
-    geom_line(colour = 'black') +
-    geom_point(pch = 21, size = 5, fill = 'grey') +
-    theme_bw(base_size = 16) +
-    theme(
-      axis.title.x = element_blank(), 
-      axis.text.x = element_text(angle = 45, hjust = 1), 
-      legend.position = 'top', 
-      legend.title = element_blank()
-    ) + 
-    scale_y_continuous('Number of locations') + 
-    scale_x_continuous(breaks = unique(yrsmp$yr))
+  
+  # pa plot
+  if(ploinp == 'pa'){
+    
+    out <- ggplot(yrcnt, aes(x = yr, group = occurrence, fill = occurrence, y = count)) + 
+      geom_line() +
+      geom_point(pch = 21, size = 5) +
+      theme_bw(base_size = 16) +
+      theme(
+        axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1), 
+        legend.position = c(0.95, 0.9), 
+        legend.title = element_blank(), 
+        legend.background = element_blank()
+      ) + 
+      scale_fill_manual(values = c('tomato1', 'lightgreen')) +
+      scale_y_continuous('Number of locations') + 
+      scale_x_continuous(breaks = unique(yrcnt$yr))
+  
+  # tot plot
+  } else {
+    
+    out <- ggplot(yrsmp, aes(x = yr, y = count)) + 
+      geom_line(colour = 'black') +
+      geom_point(pch = 21, size = 5, fill = 'grey') +
+      theme_bw(base_size = 16) +
+      theme(
+        axis.title.x = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1), 
+        legend.position = 'top', 
+        legend.title = element_blank()
+      ) + 
+      scale_y_continuous('Number of locations') + 
+      scale_x_continuous(breaks = unique(yrsmp$yr))
+    
+  }  
   
   return(out)
 
 })
 ```
 
-Tabular summary
+<br></br>
+Tabular summary for `r renderText(input$spmap)`, `r renderText(input$yearssh[1])` to `r renderText(input$yearssh[2])`:
 
-Downloads
+```{r}
+downloadButton('tabdl', 'Download table')
+```
+
+```{r}
+# table download
+downloadHandler(
+  filename = function() {'biotab.csv'},
+  content = function(file) {
+  
+    write.csv(sprcttab(), file, quote = F, row.names = F)
+    
+  }
+)
+```
+
+<br></br>
+```{r, results = 'asis'}
+renderDataTable({sprcttab()}, options = list(pageLength = 10))
+```
+
+Downloads figures
 
