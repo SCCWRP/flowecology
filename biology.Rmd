@@ -258,7 +258,7 @@ downloadHandler(
   filename = function() {'biotab.csv'},
   content = function(file) {
   
-    write.csv(sprcttab(), file, quote = F, row.names = F, sep = '\t')
+    write.csv(sprcttab(), file, quote = T, row.names = F)
     
   }
 )
