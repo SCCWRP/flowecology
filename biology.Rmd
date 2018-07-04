@@ -20,6 +20,7 @@ library(plotly)
 library(shiny)
 library(leaflet)
 library(kableExtra)
+library(mapedit)
 
 prj <- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
 
@@ -53,9 +54,7 @@ column(width = 12,
 )
 ```
 
-This map shows the stream network and locations with biological data.  Select a species to view locations and tabular information of where and when the species was observed.
-
-Add selector for source
+This map shows the stream network and locations with biological data.  Select a species and year range for surveys to view locations.
 
 ```{r reactives}
 # species data to plot
@@ -178,8 +177,10 @@ yrcnt <- reactive({
 ```
 
 ```{r spmap}
-output$spmap = renderLeaflet({spmap()@map})
-leafletOutput('spmap', height = 500)
+editModUI('editor', height = 500)
+
+edits <- reactive({callModule(editMod, 'editor', spmap()@map)})
+renderUI(edits()())
 ```
 
 <br></br>
@@ -199,11 +200,13 @@ selectInput("ploinp", "Select plot type to show:",
 ```{r plosit, out.width = "100%"}
 renderPlot({
 
+  req(edits()()$finished)
+
   # inputs
   ploinp <- input$ploinp
   yrcnt <- yrcnt()
   yrsmp <- yrsmp()
-  
+  browser()
   # pa plot
   if(ploinp == 'pa'){
     
