@@ -57,7 +57,9 @@ column(width = 12,
 This map shows the stream network and locations with biological data.  Select a species and year range for surveys to view locations.
 
 ```{r reactives}
+
 # species data to plot
+# mapsel can't go in here, nested too deeply
 sprct <- reactive({
   
   # input
@@ -67,7 +69,20 @@ sprct <- reactive({
   out <- biodat %>% 
     filter(name %in% spmap) %>% 
     filter(yr >= yearssh[1] & yr <= yearssh[2])
+
+  return(out)
   
+})
+
+# selection from map as sf object, same crs as biodat
+mapsel <- reactive({
+  
+  req(edits()()$finished)
+  
+  # transform
+  out <- edits()()$finished %>% 
+    st_transform(st_crs(biodat))
+
   return(out)
   
 })
@@ -77,6 +92,15 @@ sprcttab <- reactive({
   
   # input
   sprct <- sprct()
+  mapsel <- mapsel()
+  
+  # subset sprct if map selection made 
+  if(!is.null(mapsel)){
+    
+    sprct <- st_intersection(mapsel, sprct)
+    # req(nrow(sprct > 0)) 
+     
+  }
   
   # get coordinates, remove from obj
   crds <- st_coordinates(sprct) %>% 
@@ -122,6 +146,16 @@ yrsmp <- reactive({
   
   # input
   sprct <- sprct()
+  mapsel <- mapsel()
+  
+  # subset sprct if map selection made 
+  if(!is.null(mapsel)){
+    
+    sprct <- st_intersection(mapsel, sprct)
+    # req(nrow(sprct > 0)) 
+     
+  }
+  
   st_geometry(sprct) <- NULL
 
   # full year range
@@ -151,6 +185,15 @@ yrcnt <- reactive({
   
   # input
   sprct <- sprct()
+  mapsel <- mapsel()
+  
+  # subset sprct if map selection made 
+  if(!is.null(mapsel)){
+    
+    sprct <- st_intersection(mapsel, sprct)
+    # req(nrow(sprct > 0)) 
+     
+  }
   st_geometry(sprct) <- NULL
   
   # full year range, by occurrence
@@ -177,8 +220,8 @@ yrcnt <- reactive({
 ```
 
 ```{r spmap}
+# mapview/leaflet with selection
 editModUI('editor', height = 500)
-
 edits <- reactive({callModule(editMod, 'editor', spmap()@map)})
 renderUI(edits()())
 ```
@@ -200,13 +243,11 @@ selectInput("ploinp", "Select plot type to show:",
 ```{r plosit, out.width = "100%"}
 renderPlot({
 
-  req(edits()()$finished)
-
   # inputs
   ploinp <- input$ploinp
   yrcnt <- yrcnt()
   yrsmp <- yrsmp()
-  browser()
+
   # pa plot
   if(ploinp == 'pa'){
     
