@@ -14,7 +14,7 @@ biodat <- biodat %>%
     yr = year(date), 
     mo = month(date),
     occurrence = factor(occurrence, levels = c(0, 1), labels = c('absent', 'present')),
-    occol = ifelse(occurrence == 'present', 'lightgreen', 'tom ato1'),
+    occol = ifelse(occurrence == 'present', 'lightgreen', 'tomato1'),
     occex = ifelse(occurrence == 'present', 7, 3)
   )
 save(biodat, file = 'data/biodat.RData', compress = 'xz')

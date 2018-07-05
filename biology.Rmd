@@ -35,20 +35,20 @@ column(width = 12,
 
        column(width = 6, 
               
-              # select species to show
-              selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
-              
-       ), 
-       
-       column(width = 6, 
-              
               # year slider
               sliderInput("yearssh", label = 'Select year ranges to show:',  
                 min = 1983, max = 2018, 
                 value = c(1983, 2018),
                 sep = '', ticks = FALSE
               )
-
+            
+       ), 
+       
+       column(width = 6, 
+              
+              # select species to show
+              selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
+                
         )
        
 )
@@ -76,20 +76,28 @@ sprct <- reactive({
 
 # selection from map as sf object, same crs as biodat
 mapsel <- reactive({
-  
-  req(edits()()$finished)
-  
-  # transform
-  out <- edits()()$finished %>% 
-    st_transform(st_crs(biodat))
 
+  # return NULL is no map selection
+  if(is.null(edits()()$finished)){
+    
+    out <- NULL
+  
+  # otherwise return selection after crs transform  
+  } else {
+    
+    # transform
+    out <- edits()()$finished %>% 
+      st_transform(st_crs(biodat))
+    
+  }
+  
   return(out)
   
 })
 
 # species data for table, from sprct
 sprcttab <- reactive({
-  
+
   # input
   sprct <- sprct()
   mapsel <- mapsel()
@@ -97,9 +105,13 @@ sprcttab <- reactive({
   # subset sprct if map selection made 
   if(!is.null(mapsel)){
     
-    sprct <- st_intersection(mapsel, sprct)
-    # req(nrow(sprct > 0)) 
-     
+    sprcttmp <- st_intersection(mapsel, sprct)
+    if(nrow(sprcttmp) != 0){
+      
+      sprct <- sprcttmp
+      
+    } 
+
   }
   
   # get coordinates, remove from obj
@@ -114,7 +126,8 @@ sprcttab <- reactive({
       latitude = crds$Y,
       longitude = crds$X
       ) %>% 
-    dplyr::select(FID_1, latitude, longitude, date, occurrence, source)
+    dplyr::select(FID_1, latitude, longitude, date, occurrence, source) %>% 
+    unique
     
   return(sprcttab)
   
@@ -148,21 +161,25 @@ yrsmp <- reactive({
   sprct <- sprct()
   mapsel <- mapsel()
   
-  # subset sprct if map selection made 
-  if(!is.null(mapsel)){
-    
-    sprct <- st_intersection(mapsel, sprct)
-    # req(nrow(sprct > 0)) 
-     
-  }
-  
-  st_geometry(sprct) <- NULL
-
   # full year range
   yrs <- range(sprct$yr, na.rm = T)
   yrs <- seq(yrs[1], yrs[2])
   yrs <- data.frame(yr = yrs)
+
+  # subset sprct if map selection made 
+  if(!is.null(mapsel)){
+    
+    sprcttmp <- st_intersection(mapsel, sprct)
+    if(nrow(sprcttmp) != 0){
+      
+      sprct <- sprcttmp
+      
+    } 
+
+  }
   
+  st_geometry(sprct) <- NULL
+
   # summarize  
   out <- sprct %>%
     select(name, yr, FID_1) %>% 
@@ -187,15 +204,6 @@ yrcnt <- reactive({
   sprct <- sprct()
   mapsel <- mapsel()
   
-  # subset sprct if map selection made 
-  if(!is.null(mapsel)){
-    
-    sprct <- st_intersection(mapsel, sprct)
-    # req(nrow(sprct > 0)) 
-     
-  }
-  st_geometry(sprct) <- NULL
-  
   # full year range, by occurrence
   yrs <- range(sprct$yr, na.rm = T)
   yrs <- seq(yrs[1], yrs[2])
@@ -204,6 +212,19 @@ yrcnt <- reactive({
     occurrence = c('present', 'absent')
   )
 
+  # subset sprct if map selection made 
+  if(!is.null(mapsel)){
+    
+    sprcttmp <- st_intersection(mapsel, sprct)
+    if(nrow(sprcttmp) != 0){
+      
+      sprct <- sprcttmp
+      
+    } 
+
+  }
+  st_geometry(sprct) <- NULL
+  
   # summarize
   out <- sprct %>%
     select(name, yr, occurrence) %>% 
