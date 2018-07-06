@@ -240,11 +240,21 @@ yrcnt <- reactive({
 })
 ```
 
+```{r}
+actionButton("mapdl", "Download map screenshot")
+```
+
 ```{r spmap}
 # mapview/leaflet with selection
 editModUI('editor', height = 500)
 edits <- reactive({callModule(editMod, 'editor', spmap()@map)})
 renderUI(edits()())
+```
+
+```{r mapdl}
+observeEvent(input$mapdl, {
+    mapshot(spmap(), file = '/exported_map.pdf')
+  })
 ```
 
 <br></br>
@@ -314,7 +324,7 @@ plosit <- reactive({
 ```{r plositdl}
 # button to download the plot 
 downloadHandler(
-  filename = function() { 'biodat.pdf' },
+  filename = function() { 'bioplo.pdf' },
   content = function(file) {
   
     # add informative title to plot
