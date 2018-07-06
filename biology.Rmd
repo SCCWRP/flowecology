@@ -312,18 +312,22 @@ plosit <- reactive({
 ```
 
 ```{r plositdl}
-# download the plot 
+# button to download the plot 
 downloadHandler(
   filename = function() { 'biodat.pdf' },
   content = function(file) {
   
-    pdf(file, width = 9, height =5, family = 'serif')
-    print(plosit())
+    # add informative title to plot
+    out <- plosit() + 
+      ggtitle(paste0(input$spmap, ', ', input$yearssh[1], ' to ', input$yearssh[2]))
+    
+    # save
+    pdf(file, width = 11, height = 6, family = 'serif')
+    print(out)
     dev.off()
     
  }
 )
-  
 ```
 
 ```{r, out.width = "100%"}
