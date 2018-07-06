@@ -253,7 +253,7 @@ renderUI(edits()())
 
 ```{r mapdl}
 observeEvent(input$mapdl, {
-    mapshot(spmap(), file = '/exported_map.pdf')
+    mapshot(spmap()@map, file = paste0(getwd(), "/map.png"))
   })
 ```
 
