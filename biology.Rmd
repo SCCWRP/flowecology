@@ -261,8 +261,9 @@ selectInput("ploinp", "Select plot type to show:",
 )
 ```
 
-```{r plosit, out.width = "100%"}
-renderPlot({
+```{r plosit}
+# count plot, as reactive for download
+plosit <- reactive({
 
   # inputs
   ploinp <- input$ploinp
@@ -310,6 +311,26 @@ renderPlot({
 })
 ```
 
+```{r plositdl}
+# download the plot 
+downloadHandler(
+  filename = function() { 'biodat.pdf' },
+  content = function(file) {
+  
+    pdf(file, width = 9, height =5, family = 'serif')
+    print(plosit())
+    dev.off()
+    
+ }
+)
+  
+```
+
+```{r, out.width = "100%"}
+downloadButton('plodl', 'Download plot')
+renderPlot({plosit()})
+```
+
 <br></br>
 Tabular summary for `r renderText(input$spmap)`, `r renderText(input$yearssh[1])` to `r renderText(input$yearssh[2])`:
 
@@ -333,6 +354,4 @@ downloadHandler(
 ```{r, results = 'asis'}
 renderDataTable({sprcttab()}, options = list(pageLength = 10))
 ```
-
-Downloads figures
 
