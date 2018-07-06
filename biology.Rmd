@@ -240,21 +240,11 @@ yrcnt <- reactive({
 })
 ```
 
-```{r}
-actionButton("mapdl", "Download map screenshot")
-```
-
 ```{r spmap}
 # mapview/leaflet with selection
 editModUI('editor', height = 500)
 edits <- reactive({callModule(editMod, 'editor', spmap()@map)})
 renderUI(edits()())
-```
-
-```{r mapdl}
-observeEvent(input$mapdl, {
-    mapshot(spmap()@map, file = paste0(getwd(), "/map.png"))
-  })
 ```
 
 <br></br>
