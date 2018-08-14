@@ -8,4 +8,74 @@ runtime: shiny
 
 ## Modelled flow data
 
-Informative text
+```{r setup, include = FALSE}
+# globals
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F)
+
+library(tidyverse)
+library(sf)
+library(mapview)
+library(plotly)
+library(shiny)
+library(leaflet)
+library(kableExtra)
+library(mapedit)
+
+prj <- 4326 #"+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
+
+source('R/funcs.R')
+
+data(flodat)
+data(prsdat)
+data(rchdat)
+
+rchdat <- rchdat %>% 
+  st_transform(crs = prj)
+prsdat <- prsdat %>% 
+  st_transform(crs = prj)
+```
+
+```{r}
+out <- reactive({
+  
+  mapview(rchdat, homebutton = F, color = 'grey')
+  
+})
+
+# mapview/leaflet with selection
+selectModUI('selector', height = 500)
+selects <- reactive({callModule(selectMod, 'selector', 
+      
+      out()@map %>% 
+        addFeatures(
+          data = prsdat,
+          layerId = ~unq_id,
+          stroke = TRUE,
+          color = 'orange',
+          fill = TRUE,
+          fillColor = 'black',
+          radius=5)
+      
+      )})
+
+rv <- reactiveValues(selected=NULL)
+
+observe({
+  gs <- selects()()
+
+  if(length(gs$id) > 0) {
+    rv$selected <- gs$id
+  } else {
+    rv$selected <- NULL
+  }
+})
+
+renderPrint({
+  
+  rv$selected
+  # browser()
+  
+})
+```
+
