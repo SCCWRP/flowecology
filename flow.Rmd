@@ -20,9 +20,8 @@ library(plotly)
 library(shiny)
 library(leaflet)
 library(kableExtra)
-library(mapedit)
 
-prj <- 4326 #"+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
+prj <- 4326 # geographic wgs84
 
 source('R/funcs.R')
 
@@ -30,52 +29,138 @@ data(flodat)
 data(prsdat)
 data(rchdat)
 
-rchdat <- rchdat %>% 
+# geographic crds for leaflet
+rchdat <- rchdat %>%
   st_transform(crs = prj)
-prsdat <- prsdat %>% 
+prsdat <- prsdat %>%
   st_transform(crs = prj)
+
+# add years for flodat
+flodat <- flodat %>% 
+  mutate(yrs = lubridate::year(date))
 ```
 
 ```{r}
-out <- reactive({
+# base map
+output$map <- renderLeaflet({
   
-  mapview(rchdat, homebutton = F, color = 'grey')
-  
-})
-
-# mapview/leaflet with selection
-selectModUI('selector', height = 500)
-selects <- reactive({callModule(selectMod, 'selector', 
-      
-      out()@map %>% 
-        addFeatures(
+  mapview(rchdat, homebutton = F, color = 'grey') %>% 
+    .@map %>% 
+    addCircleMarkers(
           data = prsdat,
           layerId = ~unq_id,
           stroke = TRUE,
-          color = 'orange',
+          color = 'black',
           fill = TRUE,
-          fillColor = 'black',
-          radius=5)
+          fillColor = 'lightgreen',
+          radius=5, 
+          weight = 1,
+          fillOpacity = 0.7,
+          label = ~unq_id)
       
-      )})
-
-rv <- reactiveValues(selected=NULL)
-
-observe({
-  gs <- selects()()
-
-  if(length(gs$id) > 0) {
-    rv$selected <- gs$id
-  } else {
-    rv$selected <- NULL
-  }
 })
 
-renderPrint({
-  
-  rv$selected
-  # browser()
-  
+# leaflet proxy for marker select
+map <- leafletProxy("map")
+
+# binding for marker select
+makeReactiveBinding('prpnt')
+
+# the selection
+observeEvent(input$map_marker_click, {
+  prpnt <<- input$map_marker_click$id
 })
+
+observeEvent(input$map_marker_click, {
+  
+  if(is.null(prpnt)) return()  
+  
+  # filter the pour points by selection
+  selpr <- prsdat %>% 
+    filter(unq_id %in% prpnt)
+  
+  # clear markers on input select, add all points and selected point
+  map <- map %>% 
+    clearMarkers() %>% 
+    addCircleMarkers(
+          data = prsdat,
+          layerId = ~unq_id,
+          stroke = TRUE,
+          color = 'black',
+          fill = TRUE,
+          fillColor = 'lightgreen',
+          radius=5, 
+          weight = 1,
+          fillOpacity = 0.7,
+          label = ~unq_id) %>% 
+    addCircleMarkers(
+          data = selpr,
+          layerId = ~unq_id,
+          stroke = TRUE,
+          color = 'black',
+          fill = TRUE,
+          fillColor = 'red',
+          radius=5, 
+          weight = 1,
+          fillOpacity = 0.7,
+          label = ~unq_id)
+      
+})
+
+# map output
+leafletOutput('map')
+```
+
+```{r}
+column(12, 
+       
+       # get year ranges for plot
+       column(4, 
+              sliderInput("yrsl", label = 'Select year ranges to show:',  
+                min = 1981, max = 2014, 
+                value = c(1981, 2014),
+                sep = '', ticks = FALSE
+              )
+              
+       ), 
+       
+       # toggle for log space        
+       column(4, 
+              selectInput('lgsl', label = 'Log-space?', choices = c(T, F), selected = F)
+       )
+      
+)
+```
+
+```{r}
+# selected flo data for point
+renderPlot({
+  
+  if(is.null(prpnt)) 
+    return()
+  
+  # inputs
+  lgsl <- input$lgsl
+  yrsl <- input$yrsl
+  
+  # select data to plot
+  toplo <- flodat %>% 
+    filter(unq_id %in% prpnt) %>% 
+    filter(yrs >= yrsl[1] & yrs <= yrsl[2])
+  
+  # plot
+  p <- ggplot(toplo, aes(x = date, y = flo)) +
+    geom_line() +
+    ggtitle(prpnt) +
+    theme_bw(base_family = 'serif', base_size = 18) +
+    ylab('Flow')
+  
+  # for log-space
+  if(lgsl) p <- p + scale_y_log10('Log-flow')
+  
+  return(p)
+  
+  })
+
 ```
 
