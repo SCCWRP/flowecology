@@ -5,6 +5,6 @@ account: sccwrp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 399405
-bundleId: 1535282
+bundleId: 2189360
 url: https://sccwrp.shinyapps.io/flowecology/
-when: 1534281038.79253
+when: 1561922906.64718

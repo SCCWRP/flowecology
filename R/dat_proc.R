@@ -83,3 +83,26 @@ save(rchdat, file = 'data/rchdat.RData', compress = 'xz')
 
 # flow metrics calculated where biology was observed
 file.copy('../flowmetrics/data/bioflowmetest.RData', 'data/')
+
+# baseline flow metrics, all COMIDs
+file.copy('../flowmetrics/data/bsflowmetest.RData', 'data/')
+
+# RF models for flow metrics ----------------------------------------------
+
+# chub
+file.copy('../data_and_scripts/mod_chub_rf.RData', 'data/')
+
+# sucker
+file.copy('../data_and_scripts/mod_sucker_rf.RData', 'data/')
+
+# toad
+file.copy('../data_and_scripts/mod_toad_rf.RData', 'data/')
+
+# trout
+file.copy('../data_and_scripts/mod_trout_rf.RData', 'data/')
+
+# turle
+file.copy('../data_and_scripts/mod_turtle_rf.RData', 'data/')
+
+# vireo
+file.copy('../data_and_scripts/mod_vireo_rf.RData', 'data/')

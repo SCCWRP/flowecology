@@ -6,7 +6,7 @@ runtime: shiny
 
 <br>
 
-## Baseline conditions
+# Baseline conditions {.tabset}
 
 ```{r setup, include = FALSE}
 # globals
@@ -16,151 +16,135 @@ opts_chunk$set(echo = F, message = F, warning = F)
 library(tidyverse)
 library(sf)
 library(mapview)
-library(plotly)
 library(shiny)
 library(leaflet)
-library(kableExtra)
+library(randomForest)
 
 prj <- 4326 # geographic wgs84
 
 source('R/funcs.R')
 
-data(flodat)
-data(prsdat)
 data(rchdat)
-
-# geographic crds for leaflet
-rchdat <- rchdat %>%
-  st_transform(crs = prj)
-prsdat <- prsdat %>%
-  st_transform(crs = prj)
-
-# add years for flodat
-flodat <- flodat %>% 
-  mutate(yrs = lubridate::year(date))
+data(biodat)
+data(bsflowmetest)
+data(mod_chub_rf)
+data(mod_sucker_rf)
+data(mod_toad_rf)
+data(mod_trout_rf)
+data(mod_turtle_rf)
+data(mod_vireo_rf)
 ```
 
-```{r}
-# base map
-output$map <- renderLeaflet({
-  
-  mapview(rchdat, homebutton = F, color = 'grey') %>% 
-    .@map %>% 
-    addCircleMarkers(
-          data = prsdat,
-          layerId = ~unq_id,
-          stroke = TRUE,
-          color = 'black',
-          fill = TRUE,
-          fillColor = 'lightgreen',
-          radius=5, 
-          weight = 1,
-          fillOpacity = 0.7,
-          label = ~unq_id)
-      
-})
+```{r mastinp}
+column(width = 12,
 
-# leaflet proxy for marker select
-map <- leafletProxy("map")
-
-# binding for marker select
-makeReactiveBinding('prpnt')
-
-# the selection
-observeEvent(input$map_marker_click, {
-  prpnt <<- input$map_marker_click$id
-})
-
-observeEvent(input$map_marker_click, {
-  
-  if(is.null(prpnt)) return()  
-  
-  # filter the pour points by selection
-  selpr <- prsdat %>% 
-    filter(unq_id %in% prpnt)
-  
-  # clear markers on input select, add all points and selected point
-  map <- map %>% 
-    clearMarkers() %>% 
-    addCircleMarkers(
-          data = prsdat,
-          layerId = ~unq_id,
-          stroke = TRUE,
-          color = 'black',
-          fill = TRUE,
-          fillColor = 'lightgreen',
-          radius=5, 
-          weight = 1,
-          fillOpacity = 0.7,
-          label = ~unq_id) %>% 
-    addCircleMarkers(
-          data = selpr,
-          layerId = ~unq_id,
-          stroke = TRUE,
-          color = 'black',
-          fill = TRUE,
-          fillColor = 'red',
-          radius=5, 
-          weight = 1,
-          fillOpacity = 0.7,
-          label = ~unq_id)
-      
-})
-
-# map output
-leafletOutput('map')
-```
-
-```{r}
-column(12, 
-       
-       # get year ranges for plot
-       column(4, 
-              sliderInput("yrsl", label = 'Select year ranges to show:',  
-                min = 1981, max = 2014, 
-                value = c(1981, 2014),
-                sep = '', ticks = FALSE
-              )
+       column(width = 4, 
               
-       ), 
+              # select species to show
+              selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
+                
+        ), 
        
-       # toggle for log space        
-       column(4, 
-              selectInput('lgsl', label = 'Log-space?', choices = c(T, F), selected = F)
-       )
-      
+       column(width = 4,
+              
+              # select metric type
+              selectInput("mettyp", "Select predictor type:", choices = c('Flow'))
+       
+        ),
+       
+       column(width = 4, 
+              
+              renderUI({
+                
+                # input
+                mettyp <- input$mettyp
+                
+                if(mettyp == 'Flow'){
+                  selectInput('bstyp', 'Select baseline conditions:', choices = list(dry = '2014-07-01', moderate = '2010-07-01', wet = '1993-07-01'))
+              
+                }
+                
+              })
+              
+        )
+       
 )
 ```
 
-```{r}
-# selected flo data for point
-renderPlot({
+```{r reactives}
+# rf model to use from species selection
+spmod <- reactive({
   
-  if(is.null(prpnt)) 
-    return()
+  # input
+  spmap <- input$spmap
   
-  # inputs
-  lgsl <- input$lgsl
-  yrsl <- input$yrsl
+  modnm <- gsub('^.*\\s(.*)$', '\\1', spmap) %>% 
+    paste0('mod_', ., '_rf')
   
-  # select data to plot
-  toplo <- flodat %>% 
-    filter(unq_id %in% prpnt) %>% 
-    filter(yrs >= yrsl[1] & yrs <= yrsl[2])
+  out <- eval(parse(text = modnm))
   
-  # plot
-  p <- ggplot(toplo, aes(x = date, y = flo)) +
-    geom_line() +
-    ggtitle(prpnt) +
-    theme_bw(base_family = 'serif', base_size = 18) +
-    ylab('Flow')
+  return(out)
   
-  # for log-space
-  if(lgsl) p <- p + scale_y_log10('Log-flow')
-  
-  return(p)
-  
-  })
+})
 
+# baseline metrics to use
+bsmets <- reactive({
+  
+  # input
+  bstyp <- input$bstyp
+  
+  req(bstyp)
+  
+  # filter baseline metrics by year selection
+  out <- bsflowmetest %>% 
+    filter(dtsl %in% as.Date(bstyp)) %>% 
+    dplyr::select(var, COMID, est) %>% 
+    spread(var, est)
+  
+  return(out)
+  
+})
+
+# probability of occurrence predictions for species and baseline condition
+bsprds <- reactive({
+  
+  # input
+  spmod <- spmod()
+  bsmets <- bsmets()
+  
+  # get predictions by comid
+  out <- bsmets %>% 
+    mutate(
+      procc = predict(spmod, newdata = bsmets, type = 'prob')[, 1, drop = T]
+    ) %>% 
+    dplyr::select(COMID, procc)
+  
+  return(out)
+  
+})
+
+# map of predictions by comid 
+bsprdsmap <- reactive({
+  
+  # input
+  bsprds <- bsprds()
+  
+  tomap <- rchdat %>% 
+    left_join(bsprds, by = 'COMID')
+
+  out <- mapview(tomap, homebutton = F, zcol = 'procc', legend = T, lwd = 1, alpha = 0.9, layer = 'Pr. occurrence') 
+  
+  return(out)
+
+})
 ```
+
+```{r}
+output$bsprdsmap <- renderLeaflet({bsprdsmap()@map})
+```
+```{r}
+leafletOutput('bsprdsmap')
+```
+
+
 

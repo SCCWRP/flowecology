@@ -16,7 +16,6 @@ opts_chunk$set(echo = F, message = F, warning = F)
 library(tidyverse)
 library(sf)
 library(mapview)
-library(plotly)
 library(shiny)
 library(leaflet)
 
