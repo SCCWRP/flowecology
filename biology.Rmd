@@ -6,7 +6,7 @@ runtime: shiny
 
 <br>
 
-## Observed biology
+# Observed biology {.tabset}
 
 ```{r setup, include = FALSE}
 # globals
@@ -19,8 +19,6 @@ library(mapview)
 library(plotly)
 library(shiny)
 library(leaflet)
-library(kableExtra)
-library(mapedit)
 
 prj <- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
 
@@ -28,108 +26,58 @@ source('R/funcs.R')
 
 data(biodat)
 data(rchdat)
+data(bioflowmetest)
 ```
 
 ```{r mastinp}
 column(width = 12,
 
-       column(width = 6, 
-              
-              # year slider
-              sliderInput("yearssh", label = 'Select year ranges to show:',  
-                min = 1983, max = 2018, 
-                value = c(1983, 2018),
-                sep = '', ticks = FALSE
-              )
-            
-       ), 
-       
-       column(width = 6, 
+       column(width = 4, 
               
               # select species to show
               selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
                 
+        ), 
+       
+       column(width = 4,
+              
+              # select metric type
+              selectInput("mettyp", "Select predictor type:", choices = c('Flow'))
+       
+        ),
+       
+       column(width = 4, 
+              
+              renderUI({
+                
+                # input
+                mettyp <- input$mettyp
+                
+                if(mettyp == 'Flow'){
+                  tosel <- names(bioflowmetest)
+                  tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>')]
+                }
+                
+                selectInput("metsel", "Select meric:", choices = tosel)
+                
+              })
+              
         )
        
 )
 ```
 
-This map shows the stream network and locations with biological data.  Select a species and year range for surveys to view locations.
-
 ```{r reactives}
-
-# species data to plot
-# mapsel can't go in here, nested too deeply
+# species selection
 sprct <- reactive({
   
   # input
   spmap <- input$spmap
-  yearssh <- input$yearssh
   
   out <- biodat %>% 
-    filter(name %in% spmap) %>% 
-    filter(yr >= yearssh[1] & yr <= yearssh[2])
-
-  return(out)
-  
-})
-
-# selection from map as sf object, same crs as biodat
-mapsel <- reactive({
-
-  # return NULL is no map selection
-  if(is.null(edits()()$finished)){
-    
-    out <- NULL
-  
-  # otherwise return selection after crs transform  
-  } else {
-    
-    # transform
-    out <- edits()()$finished %>% 
-      st_transform(st_crs(biodat))
-    
-  }
+    filter(name %in% spmap) 
   
   return(out)
-  
-})
-
-# species data for table, from sprct
-sprcttab <- reactive({
-
-  # input
-  sprct <- sprct()
-  mapsel <- mapsel()
-  
-  # subset sprct if map selection made 
-  if(!is.null(mapsel)){
-    
-    sprcttmp <- st_intersection(mapsel, sprct)
-    if(nrow(sprcttmp) != 0){
-      
-      sprct <- sprcttmp
-      
-    } 
-
-  }
-  
-  # get coordinates, remove from obj
-  crds <- st_coordinates(sprct) %>% 
-    data.frame
-  st_geometry(sprct) <- NULL
-
-  # format for table
-  sprcttab <- sprct %>%
-    mutate(
-      date = as.character(date), 
-      latitude = crds$Y,
-      longitude = crds$X
-      ) %>% 
-    dplyr::select(FID_1, latitude, longitude, date, occurrence, source) %>% 
-    unique
-    
-  return(sprcttab)
   
 })
 
@@ -138,224 +86,99 @@ spmap <- reactive({
   
   # input
   sprct <- sprct()
-
-  # get colors, pt size
-  occol <- sprct$occol
+  
+  # get pt size
   occex <- sprct$occex
   
-  # remove irrelevant columns
-  tomap <- sprct %>% 
-    select(-occol, -occex, -FID_1)
+  # colors
+  cols <- c('tomato1', 'lightgreen')
+  names(cols) <- c('absent', 'present')
+  
+  out <- mapview(rchdat, homebutton = F, color = 'black', legend = F, lwd = 0.5, alpha = 0.5, layer = 'Reaches') + 
+    mapview(sprct, zcol = 'occurrence', legend = T, col.regions = cols, cex = occex, homebutton = F, layer = 'Occurrence')
 
-  out <- mapview(rchdat, homebutton = F, color = 'grey') + 
-    mapview(tomap, zcol = 'occurrence', col.region = occol, cex = occex, legend = T, homebutton = F, layer = 'occurrence')
- 
   return(out)
  
 })
 
-# get number of sites sampled by year for a species
-yrsmp <- reactive({
+# flowmet joined with biodat, biodat COMIDs filtered by rchdat COMID
+spfldat <- reactive({
   
-  # input
+  # inputs
+  metsel <- input$metsel
+  spmap <- input$spmap
   sprct <- sprct()
-  mapsel <- mapsel()
   
-  # full year range
-  yrs <- range(sprct$yr, na.rm = T)
-  yrs <- seq(yrs[1], yrs[2])
-  yrs <- data.frame(yr = yrs)
-
-  # subset sprct if map selection made 
-  if(!is.null(mapsel)){
-    
-    sprcttmp <- st_intersection(mapsel, sprct)
-    if(nrow(sprcttmp) != 0){
-      
-      sprct <- sprcttmp
-      
-    } 
-
-  }
+  req(metsel)
   
-  st_geometry(sprct) <- NULL
-
-  # summarize  
-  out <- sprct %>%
-    select(name, yr, FID_1) %>% 
-    na.omit %>% 
-    unique %>% 
-    group_by(yr) %>% 
-    mutate(count = n()) %>% 
-    ungroup %>% 
-    select(yr, count) %>% 
-    unique %>% 
-    left_join(yrs, ., by = 'yr') %>% 
-    tidyr::complete(yr)
+  # filter flow metrics
+  fldat <- bioflowmetest %>% 
+    dplyr::select(name, COMID, date, !!metsel) %>% 
+    filter(name %in% spmap)
+  
+  # join species and flow metric data
+  out <- sprct %>% 
+    filter(COMID %in% rchdat$COMID) %>% 
+    left_join(fldat, by = c('name', 'date', 'COMID')) %>% 
+    st_set_geometry(NULL) %>% 
+    unique
   
   return(out)
   
 })
 
-# get number of sites where species was present/absent complete cases
-yrcnt <- reactive({
+# flowmet and biodata plot
+spflplt <- reactive({
   
   # input
-  sprct <- sprct()
-  mapsel <- mapsel()
+  spfldat <- spfldat()
+  metsel <- input$metsel
   
-  # full year range, by occurrence
-  yrs <- range(sprct$yr, na.rm = T)
-  yrs <- seq(yrs[1], yrs[2])
-  yrs <- crossing(
-    yr = yrs, 
-    occurrence = c('present', 'absent')
-  )
-
-  # subset sprct if map selection made 
-  if(!is.null(mapsel)){
+  # plot data
+  toplo <- spfldat %>% 
+    filter(!is.na(occurrence)) %>% 
+    mutate(
+      occurrbin = case_when(
+        occurrence %in% 'absent' ~ 0, 
+        occurrence %in% 'present' ~ 1
+      )
+    ) %>% 
+    rename(val = !!metsel)
     
-    sprcttmp <- st_intersection(mapsel, sprct)
-    if(nrow(sprcttmp) != 0){
-      
-      sprct <- sprcttmp
-      
-    } 
-
-  }
-  st_geometry(sprct) <- NULL
+  p <- ggplot(toplo, aes(x = val, y = occurrbin)) +
+    geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
+    scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen')) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), fullrange = T) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    ylab('Pr. occurrence') + 
+    xlab(metsel)
   
-  # summarize
-  out <- sprct %>%
-    select(name, yr, occurrence) %>% 
-    na.omit %>% 
-    group_by(yr, occurrence) %>% 
-    summarise(count = n()) %>% 
-    ungroup %>% 
-    left_join(yrs, ., by = c('yr', 'occurrence')) %>% 
-    tidyr::complete(yr, occurrence)
-  
-  return(out)
+  return(p)
   
 })
 ```
+
+## Observed data
 
 ```{r spmap}
-# mapview/leaflet with selection
-editModUI('editor', height = 500)
-edits <- reactive({callModule(editMod, 'editor', spmap()@map)})
-renderUI(edits()())
+# mapview
+output$spmap <- renderLeaflet({spmap()@map})
+```
+```{r}
+leafletOutput('spmap')
 ```
 
-<br></br>
-
-Number of sites sampled by year for `r renderText(input$spmap)`, `r renderText(input$yearssh[1])` to `r renderText(input$yearssh[2])`:
-
-```{r ploinp}
-# select plot type to show
-selectInput("ploinp", "Select plot type to show:", 
-  choices = c(
-    'Presence/absence site counts' = 'pa',
-    'Total site counts' = 'tot'
-    )
-)
-```
-
-```{r plosit}
-# count plot, as reactive for download
-plosit <- reactive({
-
-  # inputs
-  ploinp <- input$ploinp
-  yrcnt <- yrcnt()
-  yrsmp <- yrsmp()
-
-  # pa plot
-  if(ploinp == 'pa'){
-    
-    out <- ggplot(yrcnt, aes(x = yr, group = occurrence, fill = occurrence, y = count)) + 
-      geom_line() +
-      geom_point(pch = 21, size = 5) +
-      theme_bw(base_size = 16) +
-      theme(
-        axis.title.x = element_blank(), 
-        axis.text.x = element_text(angle = 45, hjust = 1), 
-        legend.position = c(0.95, 0.9), 
-        legend.title = element_blank(), 
-        legend.background = element_blank()
-      ) + 
-      scale_fill_manual(values = c('tomato1', 'lightgreen')) +
-      scale_y_continuous('Number of locations') + 
-      scale_x_continuous(breaks = unique(yrcnt$yr))
-  
-  # tot plot
-  } else {
-    
-    out <- ggplot(yrsmp, aes(x = yr, y = count)) + 
-      geom_line(colour = 'black') +
-      geom_point(pch = 21, size = 5, fill = 'grey') +
-      theme_bw(base_size = 16) +
-      theme(
-        axis.title.x = element_blank(), 
-        axis.text.x = element_text(angle = 45, hjust = 1), 
-        legend.position = 'top', 
-        legend.title = element_blank()
-      ) + 
-      scale_y_continuous('Number of locations') + 
-      scale_x_continuous(breaks = unique(yrsmp$yr))
-    
-  }  
-  
-  return(out)
-
-})
-```
-
-```{r plositdl}
-# button to download the plot 
-downloadHandler(
-  filename = function() { 'bioplo.pdf' },
-  content = function(file) {
-  
-    # add informative title to plot
-    out <- plosit() + 
-      ggtitle(paste0(input$spmap, ', ', input$yearssh[1], ' to ', input$yearssh[2]))
-    
-    # save
-    pdf(file, width = 11, height = 6, family = 'serif')
-    print(out)
-    dev.off()
-    
- }
-)
-```
-
-```{r, out.width = "100%"}
-downloadButton('plodl', 'Download plot')
-renderPlot({plosit()})
-```
-
-<br></br>
-Tabular summary for `r renderText(input$spmap)`, `r renderText(input$yearssh[1])` to `r renderText(input$yearssh[2])`:
+## Modelled response
 
 ```{r}
-downloadButton('tabdl', 'Download table')
+output$spflplt <- renderPlot({spflplt()}, width = 500, height = 500)
 ```
-
 ```{r}
-# table download
-downloadHandler(
-  filename = function() {'biotab.csv'},
-  content = function(file) {
-  
-    write.csv(sprcttab(), file, quote = T, row.names = F)
-    
-  }
-)
-```
-
-<br></br>
-```{r, results = 'asis'}
-renderDataTable({sprcttab()}, options = list(pageLength = 10))
+plotOutput('spflplt')
 ```
 
