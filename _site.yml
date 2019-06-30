@@ -4,12 +4,12 @@ navbar:
   left:
     - text: "Home"
       href: index.Rmd
-    - text: "Biological data"
+    - text: "Observed biology"
       href:  biology.Rmd
-    - text: "Modelled flow data"
-      href: flow.Rmd
-    - text: "Biological response to flow"
-      href: biologyflow.Rmd
+    - text: "Baseline conditions"
+      href: baseline.Rmd
+    - text: "Future scenarios"
+      href: future.Rmd
 output_dir: "."
 output:
   html_document:

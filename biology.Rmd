@@ -6,7 +6,7 @@ runtime: shiny
 
 <br>
 
-## Biological data
+## Observed biology
 
 ```{r setup, include = FALSE}
 # globals

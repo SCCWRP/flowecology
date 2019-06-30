@@ -97,6 +97,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -111,7 +114,6 @@ body {
   padding-top: 56px;
   margin-top: -56px;
 }
-
 .section h2 {
   padding-top: 56px;
   margin-top: -56px;
@@ -131,6 +133,43 @@ body {
 .section h6 {
   padding-top: 56px;
   margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
 }
 </style>
 
@@ -152,18 +191,77 @@ $(document).ready(function () {
 });
 </script>
 
-
 <div class="container-fluid main-container">
 
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -185,13 +283,13 @@ $(document).ready(function () {
   <a href="index.Rmd">Home</a>
 </li>
 <li>
-  <a href="biology.Rmd">Biological data</a>
+  <a href="biology.Rmd">Observed biology</a>
 </li>
 <li>
-  <a href="flow.Rmd">Modelled flow data</a>
+  <a href="baseline.Rmd">Baseline conditions</a>
 </li>
 <li>
-  <a href="biologyflow.Rmd">Biological response to flow</a>
+  <a href="future.Rmd">Future scenarios</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -224,14 +322,14 @@ $(document).ready(function () {
 </ul>
 <p>The website is structured following an analysis workflow that describes the biology, modelled hydrology, and biological response to flow changes. Data can viewed using different selection widgets and downloaded in tabular or graphical format. <strong>The tabs at the top of the website link to separate components of the analysis.</strong></p>
 <ol style="list-style-type: decimal">
-<li><p><strong>Biological data</strong>: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys</p></li>
-<li><p><strong>Modelled flow data</strong>: View and download flow data for the Los Angeles and Ventura County watersheds, historical and projected climate change scenarios</p></li>
-<li><p><strong>Biological response to flow</strong>: View and download biological responses to flow, baseline and projected climate change scenarios</p></li>
+<li><p><strong>Observed biology</strong>: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys</p></li>
+<li><p><strong>Baseline conditions</strong>: View results for baseline conditions and modelled species results for stream reaches in the study region</p></li>
+<li><p><strong>Future scenarios</strong>: View results for future scenarios and modelled species results for stream reaches in the study region</p></li>
 </ol>
 </div>
 <div id="attribution" class="section level3">
 <h3>Attribution</h3>
-<p>All site content and analyses by <a href="mailto:marcusb@sccwrp.org">Marcus Beck</a>, with assistance from <a href="mailto:jennyt@sccwrp.org">Jenny Taylor</a>, <a href="mailto:abels@sccwrp.org">Abel Santana</a>, and <a href="mailto:erics@sccwrp.org">Eric Stein</a>. Click the icon on the top left to view the web page source content.</p>
+<p>All site content and analyses by <a href="mailto:marcusb@sccwrp.org">Marcus Beck</a>, with assistance from <a href="mailto:jennyt@sccwrp.org">Jenny Taylor</a>, <a href="mailto:abels@sccwrp.org">Abel Santana</a>, and <a href="mailto:erics@sccwrp.org">Eric Stein</a>. View the web page source content <a href="https://github.com/SCCWRP/flowecology">here</a>.</p>
 </div>
 
 

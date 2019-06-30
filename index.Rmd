@@ -20,12 +20,12 @@ The objective of this website is to present the project results in a way that is
 
 The website is structured following an analysis workflow that describes the biology, modelled hydrology, and biological response to flow changes. Data can viewed using different selection widgets and downloaded in tabular or graphical format. __The tabs at the top of the website link to separate components of the analysis.__
 
-1) __Biological data__: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys
+1) __Observed biology__: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys
 
-1) __Modelled flow data__: View and download flow data for the Los Angeles and Ventura County watersheds, historical and projected climate change scenarios
+1) __Baseline conditions__: View results for baseline conditions and modelled species results for stream reaches in the study region
 
-1) __Biological response to flow__: View and download biological responses to flow, baseline and projected climate change scenarios
+1) __Future scenarios__: View results for future scenarios and modelled species results for stream reaches in the study region
 
 ### Attribution
 
-All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with assistance from [Jenny Taylor](mailto:jennyt@sccwrp.org), [Abel Santana](mailto:abels@sccwrp.org), and [Eric Stein](mailto:erics@sccwrp.org). Click the icon on the top left to view the web page source content.
+All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with assistance from [Jenny Taylor](mailto:jennyt@sccwrp.org), [Abel Santana](mailto:abels@sccwrp.org), and [Eric Stein](mailto:erics@sccwrp.org). View the web page source content [here](https://github.com/SCCWRP/flowecology).
