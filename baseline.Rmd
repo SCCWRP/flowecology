@@ -33,6 +33,13 @@ data(mod_toad_rf)
 data(mod_trout_rf)
 data(mod_turtle_rf)
 data(mod_vireo_rf)
+
+# color palette function for prob map
+pal <- colorNumeric(
+  palette = RColorBrewer::brewer.pal(11, 'Spectral'),
+  na.color = 'yellow',
+  domain = c(0, 1)
+)
 ```
 
 ```{r mastinp}
@@ -77,6 +84,8 @@ spmod <- reactive({
   
   # input
   spmap <- input$spmap
+  
+  req(spmap)
   
   modnm <- gsub('^.*\\s(.*)$', '\\1', spmap) %>% 
     paste0('mod_', ., '_rf')
@@ -132,7 +141,8 @@ bsprdsmap <- reactive({
   tomap <- rchdat %>% 
     left_join(bsprds, by = 'COMID')
 
-  out <- mapview(tomap, homebutton = F, zcol = 'procc', legend = T, lwd = 1, alpha = 0.9, layer = 'Pr. occurrence') 
+  out <- mapview(tomap, layer.name = 'reset') %>% 
+    .@map
   
   return(out)
 
@@ -140,10 +150,35 @@ bsprdsmap <- reactive({
 ```
 
 ```{r}
-output$bsprdsmap <- renderLeaflet({bsprdsmap()@map})
+output$bsprdsmap <- renderLeaflet({bsprdsmap()})
 ```
 ```{r}
 leafletOutput('bsprdsmap')
+
+observe({
+    
+    input$spmap
+    
+    # reactives
+    bsprds <- bsprds()
+  
+    tomap <- rchdat %>% 
+      left_join(bsprds, by = 'COMID')
+
+    # spp prob map
+    mapout <- leafletProxy("bsprdsmap", data = tomap) %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      clearControls() %>%
+      addPolylines(opacity = 1, weight = 1, color = ~pal(procc)) %>% 
+      # label = ~paste0(COMID, ', Likely score:', as.character(round(lns, 2)))
+      # ) %>%
+      addLegend("topright", pal = pal(), values = ~procc,
+                title = "Pr. occurence", opacity = 1
+      )
+
+})
+  
 ```
 
 
