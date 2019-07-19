@@ -79,7 +79,7 @@ rchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcu
 
 save(rchdat, file = 'data/rchdat.RData', compress = 'xz')
 
-# Metrics -----------------------------------------------------------------
+# Flow metrics -----------------------------------------------------------------
 
 # flow metrics calculated where biology was observed
 file.copy('../flowmetrics/data/bioflowmetest.RData', 'data/')
@@ -106,3 +106,45 @@ file.copy('../data_and_scripts/mod_turtle_rf.RData', 'data/')
 
 # vireo
 file.copy('../data_and_scripts/mod_vireo_rf.RData', 'data/')
+
+# glms for temperature ----------------------------------------------------
+
+# chub
+file.copy('../../Jenny/AirTemp/Modeling/chub_mdl.rda', 'raw/')
+
+# sucker
+file.copy('../../Jenny/AirTemp/Modeling/suc_mdl.rda', 'raw/')
+
+# toad
+file.copy('../../Jenny/AirTemp/Modeling/toad_mdl.rda', 'raw/')
+
+# trout
+file.copy('../../Jenny/AirTemp/Modeling/trout_mdl.rda', 'raw/')
+
+# turle
+file.copy('../../Jenny/AirTemp/Modeling/turtle_mdl.rda', 'raw/')
+
+# vireo
+file.copy('../../Jenny/AirTemp/Modeling/vireo_mdl.rda', 'raw/')
+
+# Extract model fitting data for temp GLMs --------------------------------
+
+fls <- list.files('raw', pattern = '\\_mdl\\.rda$', full.names = T)
+  
+biotmpmet <- fls %>% 
+  enframe('ind', 'value') %>% 
+  mutate(dat = purrr::map(value, function(x){
+      
+      # load 
+      load(file = x)
+      nm <- basename(x) %>% gsub('\\.rda', '', .)
+      obj <- get(nm) %>% .$data
+      
+      return(obj)
+      
+    })
+  ) %>% 
+  unnest %>% 
+  select(-ind, -value)
+
+save(biotmpmet, file = 'data/biotmpmet.RData', compress = 'xz')
