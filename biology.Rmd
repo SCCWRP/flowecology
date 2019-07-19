@@ -143,7 +143,7 @@ spflplt <- reactive({
       )
     ) %>% 
     rename(val = !!metsel)
-    
+ 
   p <- ggplot(toplo, aes(x = val, y = occurrbin)) +
     geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
     scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen')) +
