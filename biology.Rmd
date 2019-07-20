@@ -26,6 +26,7 @@ source('R/funcs.R')
 data(biodat)
 data(rchdat)
 data(bioflowmetest)
+data(biotmpmet)
 ```
 
 ```{r mastinp}
@@ -41,7 +42,7 @@ column(width = 12,
        column(width = 4,
               
               # select metric type
-              selectInput("mettyp", "Select predictor type:", choices = c('Flow'))
+              selectInput("mettyp", "Select predictor type:", choices = c('Flow', 'Temperature'))
        
         ),
        
@@ -54,8 +55,13 @@ column(width = 12,
                 
                 if(mettyp == 'Flow'){
                   tosel <- names(bioflowmetest)
-                  tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>')]
                 }
+              
+                if(mettyp == 'Temperature'){
+                  tosel <- names(biotmpmet)
+                }
+                
+                tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>', 'year', 'occurrence')]
                 
                 selectInput("metsel", "Select meric:", choices = tosel)
                 
@@ -100,51 +106,85 @@ spmap <- reactive({
  
 })
 
-# flowmet joined with biodat, biodat COMIDs filtered by rchdat COMID
-spfldat <- reactive({
+# metric data as flow or temp, by selection
+mtdat <- reactive({
   
-  # inputs
-  metsel <- input$metsel
-  spmap <- input$spmap
-  sprct <- sprct()
+  # input
+  mettyp <- input$mettyp
   
-  req(metsel)
+  if(mettyp == 'Flow')
+    out <- bioflowmetest
   
-  # filter flow metrics
-  fldat <- bioflowmetest %>% 
-    dplyr::select(name, COMID, date, !!metsel) %>% 
-    filter(name %in% spmap)
-  
-  # join species and flow metric data
-  out <- sprct %>% 
-    filter(COMID %in% rchdat$COMID) %>% 
-    left_join(fldat, by = c('name', 'date', 'COMID')) %>% 
-    st_set_geometry(NULL) %>% 
-    unique
+  if(mettyp == 'Temperature')
+    out <- biotmpmet
   
   return(out)
   
 })
 
-# flowmet and biodata plot
+# metric data joined with biodat, biodat COMIDs filtered by rchdat COMID
+spmtdat <- reactive({
+  
+  # input
+  metsel <- input$metsel
+  mettyp <- input$mettyp
+  spmap <- input$spmap
+  sprct <- sprct()
+  mtdat <- mtdat()
+  
+  req(metsel)
+      
+  if(mettyp == 'Flow'){
+    
+    # filter metrics
+    mtdat <- mtdat %>% 
+      dplyr::select(name, COMID, date, !!metsel) %>% 
+      filter(name %in% spmap)
+  
+    # join species and flow metric data
+    out <- sprct %>% 
+      filter(COMID %in% rchdat$COMID) %>% 
+      left_join(mtdat, by = c('name', 'date', 'COMID')) %>% 
+      st_set_geometry(NULL) %>% 
+      unique
+    
+  } 
+      
+  if(mettyp == 'Temperature'){
+    
+    # filter metrics
+    out <- mtdat %>% 
+      dplyr::select(name, COMID, year, occurrence, !!metsel) %>% 
+      filter(name %in% spmap) %>% 
+      filter(COMID %in% rchdat$COMID) 
+    
+  }
+    
+  return(out)
+  
+})
+
+# metric and biodata plot
 spflplt <- reactive({
   
   # input
-  spfldat <- spfldat()
+  spmtdat <- spmtdat()
   metsel <- input$metsel
-  
+
   # plot data
-  toplo <- spfldat %>% 
+  toplo <- spmtdat %>% 
     filter(!is.na(occurrence)) %>% 
     mutate(
+      occurrence = as.character(occurrence), 
       occurrbin = case_when(
-        occurrence %in% 'absent' ~ 0, 
-        occurrence %in% 'present' ~ 1
+        occurrence %in% 'absent' ~ '0', 
+        occurrence %in% 'present' ~ '1', 
+        T ~ occurrence
       )
     ) %>% 
     rename(val = !!metsel)
  
-  p <- ggplot(toplo, aes(x = val, y = occurrbin)) +
+  p <- ggplot(toplo, aes(x = val, y = as.numeric(occurrbin))) +
     geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
     scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen')) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), fullrange = T) +
