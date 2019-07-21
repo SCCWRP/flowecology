@@ -20,8 +20,6 @@ library(shiny)
 library(leaflet)
 library(stargazer)
 
-prj <- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
-
 source('R/funcs.R')
 
 data(biodat)

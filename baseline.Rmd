@@ -20,7 +20,8 @@ library(shiny)
 library(leaflet)
 library(randomForest)
 
-prj <- 4326 # geographic wgs84
+# prj <- 4326 # geographic wgs84
+prj <- '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
 
 source('R/funcs.R')
 
@@ -37,9 +38,12 @@ data(mod_vireo_rf)
 # color palette function for prob map
 pal <- colorNumeric(
   palette = RColorBrewer::brewer.pal(11, 'Spectral'),
-  na.color = 'yellow',
+  na.color = NA,
   domain = c(0, 1)
 )
+
+rchdat <- rchdat %>% 
+  st_transform(crs = prj)
 ```
 
 ```{r mastinp}
@@ -141,10 +145,8 @@ bsprdsmap <- reactive({
   tomap <- rchdat %>% 
     left_join(bsprds, by = 'COMID')
 
-  out <- mapview(tomap, layer.name = 'reset') %>% 
+  mapview(tomap, layer.name = 'reset') %>% 
     .@map
-  
-  return(out)
 
 })
 ```
@@ -173,7 +175,7 @@ observe({
       addPolylines(opacity = 1, weight = 1, color = ~pal(procc)) %>% 
       # label = ~paste0(COMID, ', Likely score:', as.character(round(lns, 2)))
       # ) %>%
-      addLegend("topright", pal = pal(), values = ~procc,
+      addLegend("topright", pal = pal, values = ~procc,
                 title = "Pr. occurence", opacity = 1
       )
 
