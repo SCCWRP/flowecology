@@ -18,6 +18,7 @@ library(sf)
 library(mapview)
 library(shiny)
 library(leaflet)
+library(stargazer)
 
 prj <- "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
 
@@ -106,22 +107,6 @@ spmap <- reactive({
  
 })
 
-# metric data as flow or temp, by selection
-mtdat <- reactive({
-  
-  # input
-  mettyp <- input$mettyp
-  
-  if(mettyp == 'Flow')
-    out <- bioflowmetest
-  
-  if(mettyp == 'Temperature')
-    out <- biotmpmet
-  
-  return(out)
-  
-})
-
 # metric data joined with biodat, biodat COMIDs filtered by rchdat COMID
 spmtdat <- reactive({
   
@@ -130,14 +115,15 @@ spmtdat <- reactive({
   mettyp <- input$mettyp
   spmap <- input$spmap
   sprct <- sprct()
-  mtdat <- mtdat()
   
-  req(metsel)
+  req(!is.null(metsel))
       
   if(mettyp == 'Flow'){
+  
+    req(metsel %in% names(bioflowmetest))
     
     # filter metrics
-    mtdat <- mtdat %>% 
+    mtdat <- bioflowmetest %>% 
       dplyr::select(name, COMID, date, !!metsel) %>% 
       filter(name %in% spmap)
   
@@ -146,47 +132,53 @@ spmtdat <- reactive({
       filter(COMID %in% rchdat$COMID) %>% 
       left_join(mtdat, by = c('name', 'date', 'COMID')) %>% 
       st_set_geometry(NULL) %>% 
+      mutate(
+        occurrence = factor(occurrence, levels = c('absent', 'present'))
+      ) %>% 
       unique
     
   } 
       
   if(mettyp == 'Temperature'){
     
+    req(metsel %in% names(biotmpmet))
+
     # filter metrics
-    out <- mtdat %>% 
+    out <- biotmpmet %>% 
+      mutate(
+        occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present'))
+      ) %>% 
       dplyr::select(name, COMID, year, occurrence, !!metsel) %>% 
       filter(name %in% spmap) %>% 
       filter(COMID %in% rchdat$COMID) 
     
   }
     
+  # minor format for output
+  out <- out %>% 
+    filter(!is.na(occurrence)) %>% 
+    mutate(
+      occurrbin = case_when(
+        occurrence %in% 'absent' ~ 0, 
+        occurrence %in% 'present' ~ 1
+      )
+    ) %>% 
+    rename(val = !!metsel)
+  
   return(out)
   
 })
 
 # metric and biodata plot
-spflplt <- reactive({
+spmtplt <- reactive({
   
   # input
   spmtdat <- spmtdat()
   metsel <- input$metsel
-
-  # plot data
-  toplo <- spmtdat %>% 
-    filter(!is.na(occurrence)) %>% 
-    mutate(
-      occurrence = as.character(occurrence), 
-      occurrbin = case_when(
-        occurrence %in% 'absent' ~ '0', 
-        occurrence %in% 'present' ~ '1', 
-        T ~ occurrence
-      )
-    ) %>% 
-    rename(val = !!metsel)
- 
-  p <- ggplot(toplo, aes(x = val, y = as.numeric(occurrbin))) +
+  
+  p <- ggplot(spmtdat, aes(x = val, y = as.numeric(occurrbin))) +
     geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
-    scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen')) +
+    scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen'), drop = FALSE) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), fullrange = T) +
     theme_bw(base_family = 'serif', base_size = 16) +
     theme(
@@ -198,6 +190,18 @@ spflplt <- reactive({
     xlab(metsel)
   
   return(p)
+  
+})
+
+# regression mod for spmtplt
+spmtmod <- reactive({
+  
+  # inputs
+  spmtdat <- spmtdat()
+  
+  mod <- glm(occurrbin ~ val, spmtdat, family = 'binomial')
+  
+  return(mod)
   
 })
 ```
@@ -215,9 +219,29 @@ leafletOutput('spmap')
 ## Modelled response
 
 ```{r}
-output$spflplt <- renderPlot({spflplt()}, width = 500, height = 500)
+output$spmtplt <- renderPlot({spmtplt()}, width = 500, height = 500)
 ```
 ```{r}
-plotOutput('spflplt')
+column(12,
+  column(width = 6, 
+         plotOutput('spmtplt')
+  ), 
+  column(width = 6,
+          HTML('<br>'), 
+          renderUI({
+            
+            # input
+            spmtmod <- spmtmod()
+            metsel <- input$metsel
+            
+            cvars <- c(metsel, 'intercept')
+          
+            spmtmod %>%
+              stargazer(., type = 'html', dep.var.labels = 'presence/absence', covariate.labels = c('metric', 'intercept')) %>% 
+              HTML
+            
+          })
+  )
+)
 ```
 
