@@ -148,3 +148,12 @@ biotmpmet <- fls %>%
   select(-ind, -value)
 
 save(biotmpmet, file = 'data/biotmpmet.RData', compress = 'xz')
+
+
+# baseline temperature estimates for each COMID ---------------------------
+
+load(file = '../../Jenny/AirTemp/Modeling/baseline_stream_temp.RData')
+
+bstmpmetest <- baseline_stream_temp
+
+save(bstmpmetest, file = 'data/bstmpmetest.RData', compress = 'xz')
