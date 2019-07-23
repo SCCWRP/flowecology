@@ -167,6 +167,7 @@ save(biotmpmet, file = 'data/biotmpmet.RData', compress = 'xz')
 
 load(file = '../../Jenny/AirTemp/Modeling/baseline_stream_temp.RData')
 
-bstmpmetest <- baseline_stream_temp
+bstmpmetest <- baseline_stream_temp %>% 
+  ungroup
 
 save(bstmpmetest, file = 'data/bstmpmetest.RData', compress = 'xz')

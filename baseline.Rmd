@@ -147,11 +147,18 @@ bsprds <- reactive({
   # input
   spmod <- spmod()
   bsmets <- bsmets()
+  mettyp <- input$mettyp
+  
+  if(mettyp == 'Flow')
+    prds <- predict(spmod, newdata = bsmets, type = 'prob')[, 1, drop = T]
+  
+  if(mettyp == 'Temperature')
+    prds <- predict(spmod, newdata = bsmets, type = 'response')
   
   # get predictions by comid
   out <- bsmets %>% 
     mutate(
-      procc = predict(spmod, newdata = bsmets, type = 'prob')[, 1, drop = T]
+      procc = prds
     ) %>% 
     dplyr::select(COMID, procc)
   
