@@ -12,16 +12,8 @@ Website [here](https://sccwrp.shinyapps.io/flowecology/)
 
 * `bsflowmetest.RData` estimated flow metrics from rf models for selected baseline years 1993 (wet), 2010 (moderate), 2014 (dry), all COMID
 
-* `mod_chub_rf.RData` chub random forest model for flow metrics
+* `bstmpmetest.RData` estimated temperature metrics for all COMIDs in all baseline years
 
-* `mod_sucker_rf.RData` sucker random forest model for flow metrics
-
-* `mod_toad_rf.RData` toad random forest model for flow metrics
-
-* `mod_trout_rf.RData` trout random forest model for flow metrics
-
-* `mod_turtle_rf.RData` turtle random forest model for flow metrics
-
-* `mod_vireo_rf.RData` vireo random forest model for flow metrics
+* `metmods.RData` list with twelve elements, six rf flow models and six temperature glms
 
 * `rchdat.RData` NHD flow reaches for RB4 region

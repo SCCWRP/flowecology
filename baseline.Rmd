@@ -28,12 +28,8 @@ source('R/funcs.R')
 data(rchdat)
 data(biodat)
 data(bsflowmetest)
-data(mod_chub_rf)
-data(mod_sucker_rf)
-data(mod_toad_rf)
-data(mod_trout_rf)
-data(mod_turtle_rf)
-data(mod_vireo_rf)
+data(bstmpmetest)
+data(metmods)
 
 # color palette function for prob map
 pal <- colorNumeric(
@@ -59,7 +55,7 @@ column(width = 12,
        column(width = 4,
               
               # select metric type
-              selectInput("mettyp", "Select predictor type:", choices = c('Flow'))
+              selectInput("mettyp", "Select predictor type:", choices = c('Flow', 'Temperature'))
        
         ),
        
@@ -70,10 +66,13 @@ column(width = 12,
                 # input
                 mettyp <- input$mettyp
                 
-                if(mettyp == 'Flow'){
-                  selectInput('bstyp', 'Select baseline conditions:', choices = list(dry = '2014-07-01', moderate = '2010-07-01', wet = '1993-07-01'))
-              
-                }
+                if(mettyp == 'Flow')
+                  sels <- list(dry = '2014-07-01', moderate = '2010-07-01', wet = '1993-07-01')
+                
+                if(mettyp == 'Temperature')
+                  sels <- bstmpmetest %>% pull(year) %>% unique %>% sort
+                
+                selectInput('bstyp', 'Select baseline conditions:', choices = sels)
                 
               })
               
@@ -83,18 +82,26 @@ column(width = 12,
 ```
 
 ```{r reactives}
-# rf model to use from species selection
+# model to use from species selection and metric type selection
 spmod <- reactive({
   
   # input
   spmap <- input$spmap
+  mettyp <- input$mettyp
   
   req(spmap)
   
-  modnm <- gsub('^.*\\s(.*)$', '\\1', spmap) %>% 
-    paste0('mod_', ., '_rf')
+  modnm <- gsub('^.*\\s(.*)$', '\\1', spmap)
   
-  out <- eval(parse(text = modnm))
+  if(mettyp == 'Flow')
+    modnm <- modnm %>% 
+      paste0('mod_', ., '_rf')
+  
+  if(mettyp == 'Temperature')
+    modnm <- modnm %>% 
+      paste0(., '_mdl')
+    
+  out <- metmods[[modnm]]
   
   return(out)
   
@@ -105,14 +112,30 @@ bsmets <- reactive({
   
   # input
   bstyp <- input$bstyp
+  mettyp <- input$mettyp
   
   req(bstyp)
   
   # filter baseline metrics by year selection
-  out <- bsflowmetest %>% 
-    filter(dtsl %in% as.Date(bstyp)) %>% 
-    dplyr::select(var, COMID, est) %>% 
-    spread(var, est)
+  if(mettyp == 'Flow'){
+    
+    req(bstyp %in% as.character(bsflowmetest$dtsl))
+    
+    out <- bsflowmetest %>% 
+      filter(dtsl %in% as.Date(bstyp)) %>% 
+      dplyr::select(var, COMID, est) %>% 
+      spread(var, est)
+    
+  }
+  
+  if(mettyp == 'Temperature'){
+    
+    req(bstyp %in% bstmpmetest$year)
+    
+    out <- bstmpmetest %>% 
+      filter(year %in% bstyp)
+    
+  }
   
   return(out)
   

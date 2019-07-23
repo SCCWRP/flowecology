@@ -87,45 +87,58 @@ file.copy('../flowmetrics/data/bioflowmetest.RData', 'data/')
 # baseline flow metrics, all COMIDs
 file.copy('../flowmetrics/data/bsflowmetest.RData', 'data/')
 
-# RF models for flow metrics ----------------------------------------------
+# RF models for flow metrics, GLMs for temp metrics -----------------------
 
-# chub
-file.copy('../data_and_scripts/mod_chub_rf.RData', 'data/')
+# RF mods for flow
+file.copy('../data_and_scripts/mod_chub_rf.RData', 'raw/')
+file.copy('../data_and_scripts/mod_sucker_rf.RData', 'raw/')
+file.copy('../data_and_scripts/mod_toad_rf.RData', 'raw/')
+file.copy('../data_and_scripts/mod_trout_rf.RData', 'raw/')
+file.copy('../data_and_scripts/mod_turtle_rf.RData', 'raw/')
+file.copy('../data_and_scripts/mod_vireo_rf.RData', 'raw/')
 
-# sucker
-file.copy('../data_and_scripts/mod_sucker_rf.RData', 'data/')
-
-# toad
-file.copy('../data_and_scripts/mod_toad_rf.RData', 'data/')
-
-# trout
-file.copy('../data_and_scripts/mod_trout_rf.RData', 'data/')
-
-# turle
-file.copy('../data_and_scripts/mod_turtle_rf.RData', 'data/')
-
-# vireo
-file.copy('../data_and_scripts/mod_vireo_rf.RData', 'data/')
-
-# glms for temperature ----------------------------------------------------
-
-# chub
+# GLMs for temp
 file.copy('../../Jenny/AirTemp/Modeling/chub_mdl.rda', 'raw/')
-
-# sucker
-file.copy('../../Jenny/AirTemp/Modeling/suc_mdl.rda', 'raw/')
-
-# toad
+file.copy('../../Jenny/AirTemp/Modeling/suc_mdl.rda', 'raw/sucker_mdl.rda')
+load(file = 'raw/sucker_mdl.rda')
+sucker_mdl <- suc_mdl
+save(sucker_mdl, file = 'raw/sucker_mdl.rda')
 file.copy('../../Jenny/AirTemp/Modeling/toad_mdl.rda', 'raw/')
-
-# trout
 file.copy('../../Jenny/AirTemp/Modeling/trout_mdl.rda', 'raw/')
-
-# turle
 file.copy('../../Jenny/AirTemp/Modeling/turtle_mdl.rda', 'raw/')
-
-# vireo
 file.copy('../../Jenny/AirTemp/Modeling/vireo_mdl.rda', 'raw/')
+
+# load all and save to single object
+load(file = 'raw/mod_chub_rf.RData')
+load(file = 'raw/mod_sucker_rf.RData')
+load(file = 'raw/mod_toad_rf.RData')
+load(file = 'raw/mod_trout_rf.RData')
+load(file = 'raw/mod_turtle_rf.RData')
+load(file = 'raw/mod_vireo_rf.RData')
+load(file = 'raw/chub_mdl.rda')
+load(file = 'raw/sucker_mdl.rda')
+load(file = 'raw/toad_mdl.rda')
+load(file = 'raw/trout_mdl.rda')
+load(file = 'raw/turtle_mdl.rda')
+load(file = 'raw/vireo_mdl.rda')
+
+# combine all in list
+metmods <- list(
+  mod_chub_rf = mod_chub_rf,
+  mod_sucker_rf = mod_sucker_rf,
+  mod_toad_rf = mod_toad_rf,
+  mod_trout_rf = mod_trout_rf,
+  mod_turtle_rf = mod_turtle_rf,
+  mod_vireo_rf = mod_vireo_rf,
+  chub_mdl = chub_mdl,
+  sucker_mdl = sucker_mdl,
+  toad_mdl = toad_mdl,
+  trout_mdl = trout_mdl,
+  turtle_mdl = turtle_mdl,
+  vireo_mdl = vireo_mdl
+)
+
+save(metmods, file = 'data/metmods.RData', compress = 'xz')
 
 # Extract model fitting data for temp GLMs --------------------------------
 
