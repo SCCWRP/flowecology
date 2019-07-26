@@ -171,3 +171,38 @@ bstmpmetest <- baseline_stream_temp %>%
   ungroup
 
 save(bstmpmetest, file = 'data/bstmpmetest.RData', compress = 'xz')
+
+# species future predictions for flow metric models ------------------------
+
+# prediction models
+data(metmods)
+
+# future flow metric estimates, all COMID, by date and model
+load(file = '../flowmetrics/data/ccsm4flowmetdt1.RData')
+load(file = '../flowmetrics/data/ccsm4flowmetdt2.RData')
+load(file = '../flowmetrics/data/canesm2flowmetdt1.RData')
+load(file = '../flowmetrics/data/canesm2flowmetdt2.RData')
+load(file = '../flowmetrics/data/miroc5flowmetdt1.RData')
+load(file = '../flowmetrics/data/miroc5flowmetdt2.RData')
+
+# future temperature estimates, all COMID, by model
+load(file = '../../Jenny/AirTemp/Modeling/MIROC5_stream_temp.RData')
+load(file = '../../Jenny/AirTemp/Modeling/CCSM4_stream_temp.RData')
+load(file = '../../Jenny/AirTemp/Modeling/CanESM2_stream_temp.RData')
+
+# flow
+grd_prd <- crossing(
+  dts = c('dt1', 'dt2'),
+  spp = grep('\\_rf$', names(metmods), value = T), 
+  mds = c('canesm2', 'ccsm4', 'miroc5')
+  ) %>% 
+  group_by(dts, spp, mds) %>% 
+  nest %>% 
+  mutate(
+    prds = purrr::pmap(list(dts, spp, mds), function(dts, spp, mds){
+      
+      browser()
+    })
+  )
+
+crossing

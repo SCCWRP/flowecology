@@ -6,6 +6,96 @@ runtime: shiny
 
 <br>
 
-## Future scenarios
+## Future scenarios {.tabset}
 
-Informative text
+```{r setup, include = FALSE}
+# globals
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F)
+
+library(tidyverse)
+library(sf)
+library(mapview)
+library(shiny)
+library(leaflet)
+library(randomForest)
+
+# prj <- 4326 # geographic wgs84
+prj <- '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
+
+source('R/funcs.R')
+
+data(rchdat)
+data(metmods)
+data(biodat)
+
+# color palette function for prob map
+pal <- colorNumeric(
+  palette = RColorBrewer::brewer.pal(11, 'Spectral'),
+  na.color = NA,
+  domain = c(0, 1)
+)
+
+rchdat <- rchdat %>% 
+  st_transform(crs = prj)
+```
+
+```{r mastinp}
+column(width = 12,
+
+       column(width = 4, 
+              
+              # select species to show
+              selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
+                
+        ), 
+       
+       column(width = 4,
+              
+              # select metric type
+              selectInput("mettyp", "Select climate change model", choices = list(CanESM2 = 'canesm2', ccsm4 = 'ccsm4', miroc5 = 'miroc5'))
+       
+        ),
+       
+       column(width = 4, 
+              
+              # select model year  
+              selectInput("futyr", 'Select future year:', choices = c(`2040` = 'dt1', `2100` = 'dt2'))
+              
+        )
+       
+)
+```
+
+```{r reactives}
+# models to use from species selection and metric type selection
+spmods <- reactive({
+  
+  # input
+  spmap <- input$spmap
+  
+  req(spmap)
+  
+  modnm <- gsub('^.*\\s(.*)$', '\\1', spmap)
+  
+  flomod <- modnm %>% 
+      paste0('mod_', ., '_rf')
+
+  tmpmod <- modnm %>% 
+      paste0(., '_mdl')
+    
+  out <- metmods[c(flomod, tmpmod)]
+  
+  return(out)
+  
+})
+
+# # species predictions 
+# spprds <- reactive({
+#   
+#   
+#   
+#   
+# })
+```
+
