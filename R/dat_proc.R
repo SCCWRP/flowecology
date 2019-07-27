@@ -4,6 +4,8 @@ library(tidyverse)
 library(sf)
 library(lubridate)
 library(proj4shortcut)
+library(randomForest)
+library(here)
 
 # epsg code
 prj <- 26911
@@ -191,18 +193,69 @@ load(file = '../../Jenny/AirTemp/Modeling/CCSM4_stream_temp.RData')
 load(file = '../../Jenny/AirTemp/Modeling/CanESM2_stream_temp.RData')
 
 # flow
-grd_prd <- crossing(
+futest <- crossing(
   dts = c('dt1', 'dt2'),
-  spp = grep('\\_rf$', names(metmods), value = T), 
-  mds = c('canesm2', 'ccsm4', 'miroc5')
+  spp = c('chub', 'sucker', 'toad', 'trout', 'turtle', 'vireo'),
+  mds = c('CanESM2', 'CCSM4', 'MIROC5')
   ) %>% 
   group_by(dts, spp, mds) %>% 
   nest %>% 
   mutate(
-    prds = purrr::pmap(list(dts, spp, mds), function(dts, spp, mds){
+    data = purrr::pmap(list(dts, spp, mds), function(dts, spp, mds){
       
-      browser()
-    })
-  )
+      # flow metric model
+      flwmod <- paste('mod', spp, 'rf', sep = '_') %>% 
+        metmods[[.]]
+      
+      # temp metric model
+      tmpmod <- paste(spp, 'mdl', sep = '_') %>% 
+        metmods[[.]]
+      
+      # flow metric data to predict
+      flwdat <- mds %>% 
+        tolower %>% 
+        paste0('flowmet', dts) %>% 
+        get() %>% 
+        dplyr::select(COMID, var, est) %>% 
+        spread(var, est)
 
-crossing
+      # temperature metric data to predict
+      tmpdt <- case_when(
+        dts == 'dt1' ~ 2040, 
+        dts == 'dt2' ~ 2100
+      )
+      tmpdat <- mds %>% 
+        paste0('_stream_temp') %>% 
+        get %>%
+        filter(year %in% tmpdt)
+      
+      # flow metric predictions
+      flwprd <- predict(flwmod, newdata = flwdat, type = 'prob') %>% 
+        .[, 2]
+      
+      # temperature metric predictions
+      tmpprd <- predict(tmpmod, newdata = tmpdat, type = 'response')
+      
+      # sanity heck
+      stopifnot(identical(flwdat$COMID, tmpdat$COMID))
+      
+      # combine output
+      out <- tibble(
+        COMID = flwdat$COMID, 
+        tmpprd = tmpprd, 
+        flwprd = flwprd
+        ) %>% 
+        rowwise %>% 
+        mutate(
+          allprd = min(tmpprd, flwprd, na.rm = T), 
+          allprd = ifelse(is.infinite(allprd), NA, allprd)
+        ) %>% 
+        select(COMID, allprd)
+      
+      return(out)
+      
+    })
+  ) %>% 
+  unnest
+
+save(futest, file = here('data', 'futest.RData'), compress = 'xz')
