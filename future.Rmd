@@ -26,8 +26,7 @@ prj <- '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
 source('R/funcs.R')
 
 data(rchdat)
-data(metmods)
-data(biodat)
+data(futest)
 
 # color palette function for prob map
 pal <- colorNumeric(
@@ -46,21 +45,21 @@ column(width = 12,
        column(width = 4, 
               
               # select species to show
-              selectInput("spmap", "Choose species:", sort(unique(biodat$name)))
+              selectInput("spmap", "Choose species:", sort(unique(futest$spp)))
                 
         ), 
        
        column(width = 4,
               
               # select metric type
-              selectInput("mettyp", "Select climate change model", choices = list(CanESM2 = 'canesm2', ccsm4 = 'ccsm4', miroc5 = 'miroc5'))
+              selectInput("clmmod", "Select climate change model", choices = list(CanESM2 = 'CanESM2', CCSM4 = 'CCSM4', MIROC5 = 'MIROC5'))
        
         ),
        
        column(width = 4, 
               
               # select model year  
-              selectInput("futyr", 'Select future year:', choices = c(`2040` = 'dt1', `2100` = 'dt2'))
+              selectInput("futyr", 'Select future year:', choices = c("2040" = 'dt1', "2100" = 'dt2'))
               
         )
        
@@ -68,34 +67,68 @@ column(width = 12,
 ```
 
 ```{r reactives}
-# models to use from species selection and metric type selection
-spmods <- reactive({
+# future predictions for selection
+futprds <- reactive({
   
   # input
   spmap <- input$spmap
+  clmmod <- input$clmmod
+  futyr <- input$futyr
   
-  req(spmap)
-  
-  modnm <- gsub('^.*\\s(.*)$', '\\1', spmap)
-  
-  flomod <- modnm %>% 
-      paste0('mod_', ., '_rf')
-
-  tmpmod <- modnm %>% 
-      paste0(., '_mdl')
-    
-  out <- metmods[c(flomod, tmpmod)]
+  # filter predictions by selection
+  out <- futest %>% 
+    filter(spp %in% spmap) %>% 
+    filter(mds %in% clmmod) %>% 
+    filter(futyr %in% futyr)
   
   return(out)
   
 })
 
-# # species predictions 
-# spprds <- reactive({
-#   
-#   
-#   
-#   
-# })
+
+# map of predictions by comid 
+futprdsmap <- reactive({
+  
+  # input
+  futprds <- futprds()
+  
+  tomap <- rchdat %>% 
+    left_join(futprds, by = 'COMID')
+
+  mapview(tomap, layer.name = 'reset') %>% 
+    .@map
+
+})
 ```
 
+```{r}
+output$futprdsmap <- renderLeaflet({futprdsmap()})
+```
+```{r}
+leafletOutput('futprdsmap')
+
+observe({
+    
+    input$spmap
+    
+    # reactives
+    futprds <- futprds()
+  
+    tomap <- rchdat %>% 
+      left_join(futprds, by = 'COMID')
+
+    # spp prob map
+    mapout <- leafletProxy("futprdsmap", data = tomap) %>%
+      clearMarkers() %>%
+      clearShapes() %>%
+      clearControls() %>%
+      addPolylines(opacity = 1, weight = 1, color = ~pal(allprd)) %>% 
+      # label = ~paste0(COMID, ', Likely score:', as.character(round(lns, 2)))
+      # ) %>%
+      addLegend("topright", pal = pal, values = ~allprd,
+                title = "Pr. occurence", opacity = 1
+      )
+
+})
+  
+```

@@ -17,3 +17,5 @@ Website [here](https://sccwrp.shinyapps.io/flowecology/)
 * `metmods.RData` list with twelve elements, six rf flow models and six temperature glms
 
 * `rchdat.RData` NHD flow reaches for RB4 region
+
+* `futest.RData` Future species prob occurrence predictions, all species, models, 2040, 2100, min probability from temperature and flow metric predictions
