@@ -1,14 +1,58 @@
 ---
-title: "Biological response of stream communities to climate change"
 self_contained: yes
-output: html_document
+output: 
+  html_document:
+    includes:
+      in_header: cssloaders_in_header.html
+runtime: shiny
 ---
+
+## Biological responses of stream communities to climate change in the LA river basin {.tabset .tabset-pills}
+
+```{r setup, include = FALSE}
+# globals
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F)
+
+library(tidyverse)
+library(sf)
+library(mapview)
+library(shiny)
+library(leaflet)
+library(stargazer)
+library(randomForest)
+library(shinycssloaders)
+
+source('R/funcs.R')
+
+data(biodat)
+data(rchdat)
+data(bioflowmetest)
+data(biotmpmet)
+data(futest)
+data(bsflowmetest)
+data(bstmpmetest)
+data(metmods)
+
+# prj <- 4326 # geographic wgs84
+prj <- '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
+
+# color palette function for prob map
+pal <- colorNumeric(
+  palette = RColorBrewer::brewer.pal(11, 'Spectral'),
+  na.color = NA,
+  domain = c(0, 1)
+)
+
+rchdat <- rchdat %>% 
+  st_transform(crs = prj)
+```
 
 ### Overview
 
 This website is an interactive tool to demonstrate riparian and stream community responses to changes in hydrology in the Los Angeles and Ventura County watersheds, California, USA.  Biological response was modelled as a function of baseline and projected changes in temperature and flow using historical data and expected flow changes from down-scaled climate change models. This website is provided to enhance understanding of climate change effects on riparian dependent species to facilitate management of watershed, riparian, and in-stream habitats. 
 
-### Objectives and approach 
+#### Objectives and approach 
 
 The objective of this website is to present the project results in a way that is meaningful to the interests of the advisory committee and others that can benefit from this project.  The website is designed to address the following questions:
 
@@ -26,6 +70,461 @@ The website is structured following an analysis workflow that describes the biol
 
 1) __Future scenarios__: View results for future scenarios and modelled species results for stream reaches in the study region
 
-### Attribution
+#### Attribution
 
 All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with assistance from [Jenny Taylor](mailto:jennyt@sccwrp.org), [Abel Santana](mailto:abels@sccwrp.org), and [Eric Stein](mailto:erics@sccwrp.org). View the web page source content [here](https://github.com/SCCWRP/flowecology).
+
+
+### Observed biology {.tabset}
+
+```{r}
+column(width = 12,
+
+       column(width = 4, 
+              
+              # select species to show
+              selectInput("spmapobs", "Choose species:", sort(unique(biodat$name)))
+                
+        ), 
+       
+       column(width = 4,
+              
+              # select metric type
+              selectInput("mettypobs", "Select predictor type:", choices = c('Flow', 'Temperature'))
+       
+        ),
+       
+       column(width = 4, 
+              
+              renderUI({
+                
+                # input
+                mettypobs <- input$mettypobs
+                
+                if(mettypobs == 'Flow'){
+                  tosel <- names(bioflowmetest)
+                }
+              
+                if(mettypobs == 'Temperature'){
+                  tosel <- names(biotmpmet)
+                }
+                
+                tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>', 'year', 'occurrence')]
+                
+                selectInput("metsel", "Select meric:", choices = tosel)
+                
+              })
+              
+        )
+       
+)
+```
+
+```{r}
+# species selection
+sprct <- reactive({
+  
+  # input
+  spmapobs <- input$spmapobs
+  
+  out <- biodat %>% 
+    filter(name %in% spmapobs) 
+  
+  return(out)
+  
+})
+
+# map of species data
+spmapobs <- reactive({
+  
+  # input
+  sprct <- sprct()
+  
+  # get pt size
+  occex <- sprct$occex
+  
+  # colors
+  cols <- c('tomato1', 'lightgreen')
+  names(cols) <- c('absent', 'present')
+  
+  out <- mapview(rchdat, homebutton = F, color = 'black', legend = F, lwd = 0.5, alpha = 0.5, layer = 'Reaches') + 
+    mapview(sprct, zcol = 'occurrence', legend = T, col.regions = cols, cex = occex, homebutton = F, layer = 'Occurrence')
+
+  return(out)
+ 
+})
+
+# metric data joined with biodat, biodat COMIDs filtered by rchdat COMID
+spmtdat <- reactive({
+  
+  # input
+  metsel <- input$metsel
+  mettypobs <- input$mettypobs
+  spmapobs <- input$spmapobs
+  sprct <- sprct()
+  
+  req(!is.null(metsel))
+      
+  if(mettypobs == 'Flow'){
+  
+    req(metsel %in% names(bioflowmetest))
+    
+    # filter metrics
+    mtdat <- bioflowmetest %>% 
+      dplyr::select(name, COMID, date, !!metsel) %>% 
+      filter(name %in% spmapobs)
+  
+    # join species and flow metric data
+    out <- sprct %>% 
+      filter(COMID %in% rchdat$COMID) %>% 
+      left_join(mtdat, by = c('name', 'date', 'COMID')) %>% 
+      st_set_geometry(NULL) %>% 
+      mutate(
+        occurrence = factor(occurrence, levels = c('absent', 'present'))
+      ) %>% 
+      unique
+    
+  } 
+      
+  if(mettypobs == 'Temperature'){
+    
+    req(metsel %in% names(biotmpmet))
+
+    # filter metrics
+    out <- biotmpmet %>% 
+      mutate(
+        occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present'))
+      ) %>% 
+      dplyr::select(name, COMID, year, occurrence, !!metsel) %>% 
+      filter(name %in% spmapobs) %>% 
+      filter(COMID %in% rchdat$COMID) 
+    
+  }
+    
+  # minor format for output
+  out <- out %>% 
+    filter(!is.na(occurrence)) %>% 
+    mutate(
+      occurrbin = case_when(
+        occurrence %in% 'absent' ~ 0, 
+        occurrence %in% 'present' ~ 1
+      )
+    ) %>% 
+    rename(val = !!metsel)
+  
+  return(out)
+  
+})
+
+# metric and biodata plot
+spmtplt <- reactive({
+  
+  # input
+  spmtdat <- spmtdat()
+  metsel <- input$metsel
+  
+  p <- ggplot(spmtdat, aes(x = val, y = as.numeric(occurrbin))) +
+    geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
+    scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen'), drop = FALSE) +
+    geom_smooth(method = "glm", method.args = list(family = "binomial"), fullrange = T) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    ylab('Pr. occurrence') + 
+    xlab(metsel)
+  
+  return(p)
+  
+})
+
+# regression mod for spmtplt
+spmtmod <- reactive({
+  
+  # inputs
+  spmtdat <- spmtdat()
+  
+  mod <- glm(occurrbin ~ val, spmtdat, family = 'binomial')
+  
+  return(mod)
+  
+})
+```
+
+#### Observed data
+
+```{r}
+# mapview
+output$spmapobs <- renderLeaflet({spmapobs()@map})
+```
+```{r}
+leafletOutput('spmapobs', height = 700) %>% withSpinner()
+```
+
+#### Modelled response
+
+```{r}
+output$spmtplt <- renderPlot({spmtplt()}, width = 500, height = 500)
+```
+```{r}
+column(12,
+  column(width = 6, 
+         plotOutput('spmtplt')
+  ), 
+  column(width = 6,
+          HTML('<br>'), 
+          renderUI({
+            
+            # input
+            spmtmod <- spmtmod()
+            metsel <- input$metsel
+            
+            cvars <- c(metsel, 'intercept')
+          
+            spmtmod %>%
+              stargazer(., type = 'html', dep.var.labels = 'presence/absence', covariate.labels = c('metric', 'intercept')) %>% 
+              HTML
+            
+          })
+  )
+)
+```
+
+### Baseline conditions
+
+```{r}
+column(width = 12,
+
+       column(width = 4,
+
+              # select species to show
+              selectInput("spmapbs", "Choose species:", sort(unique(biodat$name)))
+
+        ),
+
+       column(width = 4,
+
+              # select metric type
+              selectInput("mettyp", "Select predictor type:", choices = c('Flow', 'Temperature'))
+
+        ),
+
+       column(width = 4,
+
+              renderUI({
+
+                # input
+                mettyp <- input$mettyp
+
+                if(mettyp == 'Flow')
+                  sels <- list(dry = '2014-07-01', moderate = '2010-07-01', wet = '1993-07-01')
+
+                if(mettyp == 'Temperature')
+                  sels <- bstmpmetest %>% pull(year) %>% unique %>% sort
+
+                selectInput('bstyp', 'Select baseline conditions:', choices = sels)
+
+              })
+
+        )
+
+)
+```
+
+```{r}
+# model to use from species selection and metric type selection
+spmod <- reactive({
+
+  # input
+  spmapbs <- input$spmapbs
+  mettyp <- input$mettyp
+
+  req(spmapbs)
+
+  modnm <- gsub('^.*\\s(.*)$', '\\1', spmapbs)
+
+  if(mettyp == 'Flow')
+    modnm <- modnm %>%
+      paste0('mod_', ., '_rf')
+
+  if(mettyp == 'Temperature')
+    modnm <- modnm %>%
+      paste0(., '_mdl')
+
+  out <- metmods[[modnm]]
+
+  return(out)
+
+})
+
+# baseline metrics to use
+bsmets <- reactive({
+
+  # input
+  bstyp <- input$bstyp
+  mettyp <- input$mettyp
+
+  req(bstyp)
+
+  # filter baseline metrics by year selection
+  if(mettyp == 'Flow'){
+
+    req(bstyp %in% as.character(bsflowmetest$dtsl))
+
+    out <- bsflowmetest %>%
+      filter(dtsl %in% as.Date(bstyp)) %>%
+      dplyr::select(var, COMID, est) %>%
+      spread(var, est)
+
+  }
+
+  if(mettyp == 'Temperature'){
+
+    req(bstyp %in% bstmpmetest$year)
+
+    out <- bstmpmetest %>%
+      filter(year %in% bstyp)
+
+  }
+
+  return(out)
+
+})
+
+# probability of occurrence predictions for species and baseline condition
+bsprds <- reactive({
+
+  # input
+  spmod <- spmod()
+  bsmets <- bsmets()
+  mettyp <- input$mettyp
+
+  if(mettyp == 'Flow')
+    prds <- predict(spmod, newdata = bsmets, type = 'prob')[, 1, drop = T]
+
+  if(mettyp == 'Temperature')
+    prds <- predict(spmod, newdata = bsmets, type = 'response')
+
+  # get predictions by comid
+  out <- bsmets %>%
+    mutate(
+      procc = prds
+    ) %>%
+    dplyr::select(COMID, procc)
+
+  return(out)
+
+})
+
+# map of predictions by comid
+bsprdsmap <- reactive({
+
+  # input
+  bsprds <- bsprds()
+
+  tomapbs <- rchdat %>%
+    left_join(bsprds, by = 'COMID')
+
+  mapview(tomapbs, layer.name = NULL) %>%
+    .@map   %>% 
+    clearMarkers() %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(procc),
+      label = ~as.character(round(procc, 2))
+      ) %>% 
+    addLegend(data = tomapbs, "topright", pal = pal, values = ~procc,
+              title = "Pr. occurence", opacity = 1
+    )
+
+})
+```
+
+```{r}
+output$bsprdsmap <- renderLeaflet({bsprdsmap()})
+```
+```{r}
+leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
+```
+
+### Future scenarios
+
+```{r}
+column(width = 12,
+
+       column(width = 4, 
+              
+              # select species to show
+              selectInput("spmap", "Choose species:", choices = list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle'))
+                
+        ), 
+       
+       column(width = 4,
+              
+              # select metric type
+              selectInput("clmmod", "Select climate change model", choices = list(CanESM2 = 'CanESM2', CCSM4 = 'CCSM4', MIROC5 = 'MIROC5'))
+       
+        ),
+       
+       column(width = 4, 
+              
+              # select model year  
+              selectInput("futyr", 'Select future year:', choices = c("2040" = 'dt1', "2100" = 'dt2'))
+              
+        )
+       
+)
+```
+
+```{r}
+# future predictions for selection
+futprds <- reactive({
+  
+  # input
+  spmap <- input$spmap
+  clmmod <- input$clmmod
+  futyr <- input$futyr
+  
+  # filter predictions by selection
+  out <- futest %>% 
+    filter(spp %in% spmap) %>% 
+    filter(mds %in% clmmod) %>% 
+    filter(futyr %in% futyr)
+  
+  return(out)
+  
+})
+
+
+# map of predictions by comid 
+futprdsmap <- reactive({
+  
+  # input
+  futprds <- futprds()
+  
+  tomap <- rchdat %>% 
+    left_join(futprds, by = 'COMID')
+
+  mapview(tomap, layer.name = NULL) %>% 
+    .@map %>% 
+    clearMarkers() %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(allprd),
+      label = ~as.character(round(allprd, 2))
+      ) %>%
+    addLegend(data = tomap, "topright", pal = pal, values = ~allprd,
+              title = "Pr. occurence", opacity = 1
+    )
+
+})
+```
+
+```{r}
+output$futprdsmap <- renderLeaflet({futprdsmap()})
+```
+```{r}
+leafletOutput('futprdsmap', height = 700) %>% withSpinner()
+```
