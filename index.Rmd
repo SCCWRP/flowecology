@@ -27,6 +27,7 @@ source('R/funcs.R')
 
 data(biodat)
 data(rchdat)
+data(allrchdat)
 data(bioflowmetest)
 data(biotmpmet)
 data(futest)
@@ -504,7 +505,7 @@ futprdsmap <- reactive({
   # input
   futprds <- futprds()
   
-  tomap <- rchdat %>% 
+  tomap <- allrchdat %>% 
     left_join(futprds, by = 'COMID')
 
   mapview(tomap, layer.name = NULL) %>% 

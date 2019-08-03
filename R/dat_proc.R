@@ -259,3 +259,14 @@ futest <- crossing(
   unnest
 
 save(futest, file = here('data', 'futest.RData'), compress = 'xz')
+
+
+# All reaches, filtered by locations for future predictions ---------------
+
+allrchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcus/COMID attributes.shp') %>% 
+  st_zm() %>% 
+  select(COMID) %>% 
+  st_simplify(dTolerance = 220, preserveTopology = T) %>%
+  st_transform(prj)
+
+save(allrchdat, file = 'data/allrchdat.RData', compress = 'xz')

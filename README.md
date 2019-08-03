@@ -4,6 +4,8 @@ Website [here](https://sccwrp.shinyapps.io/flowecology/)
 
 ## Data
 
+* `allrchdat.RData` all NHD flow reaches for RB4 region
+
 * `biodat.RData` compiled biogy data, species p/a by date and location
 
 * `bioflowmetest.RData` estimated flow metrics from rf models where biology was observed in `biodat.RData`
@@ -16,6 +18,6 @@ Website [here](https://sccwrp.shinyapps.io/flowecology/)
 
 * `metmods.RData` list with twelve elements, six rf flow models and six temperature glms
 
-* `rchdat.RData` NHD flow reaches for RB4 region
+* `rchdat.RData` NHD flow reaches for RB4 region, subset by unaltered locations
 
 * `futest.RData` Future species prob occurrence predictions, all species, models, 2040, 2100, min probability from temperature and flow metric predictions
