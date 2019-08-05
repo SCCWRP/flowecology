@@ -8,7 +8,7 @@ library(randomForest)
 library(here)
 
 # epsg code
-prj <- 26911
+prj <- '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
 prjutm <- utm_wgs84(11)
 
 # biology data ------------------------------------------------------------
@@ -263,10 +263,12 @@ save(futest, file = here('data', 'futest.RData'), compress = 'xz')
 
 # All reaches, filtered by locations for future predictions ---------------
 
-allrchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcus/COMID attributes.shp') %>% 
+allrchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/NHDFlowline_Clip_NAD1983_UTMzone11.shp') %>% 
   st_zm() %>% 
+  filter(FTYPE %in% 'StreamRiver') %>% 
   select(COMID) %>% 
   st_simplify(dTolerance = 220, preserveTopology = T) %>%
   st_transform(prj)
+
 
 save(allrchdat, file = 'data/allrchdat.RData', compress = 'xz')
