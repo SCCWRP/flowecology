@@ -449,27 +449,35 @@ leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
 ```{r}
 column(width = 12,
 
-       column(width = 4, 
+       column(width = 3, 
               
               # select species to show
               selectInput("spmap", "Choose species:", choices = list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle'))
                 
         ), 
        
-       column(width = 4,
+       column(width = 3,
               
               # select metric type
-              selectInput("clmmod", "Select climate change model", choices = list(CanESM2 = 'CanESM2', CCSM4 = 'CCSM4', MIROC5 = 'MIROC5'))
+              selectInput("clmmod", "Select climate model", choices = list(CanESM2 = 'CanESM2', CCSM4 = 'CCSM4', MIROC5 = 'MIROC5'))
        
         ),
        
-       column(width = 4, 
+       column(width = 3, 
               
               # select model year  
-              selectInput("futyr", 'Select future year:', choices = c("2040" = 'dt1', "2100" = 'dt2'))
+              selectInput("futyr", 'Select future year:', choices = c("2040" = '2040', "2100" = '2100'))
+              
+        ),
+       
+       column(width = 3, 
+              
+              # select prediction type year  
+              selectInput("futmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'))
               
         )
        
+      
 )
 ```
 
@@ -481,12 +489,14 @@ futprds <- reactive({
   spmap <- input$spmap
   clmmod <- input$clmmod
   futyr <- input$futyr
-  
+  futmettyp <- input$futmettyp
+
   # filter predictions by selection
   out <- futest %>% 
     filter(spp %in% spmap) %>% 
     filter(mds %in% clmmod) %>% 
-    filter(futyr %in% futyr)
+    filter(futyr %in% futyr) %>% 
+    filter(mettyp %in% futmettyp)
   
   return(out)
   
@@ -498,19 +508,19 @@ futprdsmap <- reactive({
   
   # input
   futprds <- futprds()
-  
+
   tomap <- allrchdat %>% 
-    left_join(futprds, by = 'COMID')
+    inner_join(futprds, by = 'COMID')
 
   mapview(tomap, layer.name = NULL) %>% 
     .@map %>% 
     clearMarkers() %>%
     clearShapes() %>%
     clearControls() %>%
-    addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(allprd),
-      label = ~as.character(round(allprd, 2))
+    addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(prd),
+      label = ~as.character(round(prd, 2))
       ) %>%
-    addLegend(data = tomap, "topright", pal = pal, values = ~allprd,
+    addLegend(data = tomap, "topright", pal = pal, values = ~prd,
               title = "Pr. occurence", opacity = 1
     )
 

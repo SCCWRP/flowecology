@@ -174,92 +174,218 @@ bstmpmetest <- baseline_stream_temp %>%
 
 save(bstmpmetest, file = 'data/bstmpmetest.RData', compress = 'xz')
 
-# species future predictions for flow metric models ------------------------
+# get future predictions --------------------------------------------------
 
-# prediction models
-data(metmods)
+# original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
 
-# future flow metric estimates, all COMID, by date and model
-load(file = '../flowmetrics/data/ccsm4flowmetdt1.RData')
-load(file = '../flowmetrics/data/ccsm4flowmetdt2.RData')
-load(file = '../flowmetrics/data/canesm2flowmetdt1.RData')
-load(file = '../flowmetrics/data/canesm2flowmetdt2.RData')
-load(file = '../flowmetrics/data/miroc5flowmetdt1.RData')
-load(file = '../flowmetrics/data/miroc5flowmetdt2.RData')
+load(file= "../../Jenny/RB4/FlowModel/mod_chub_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_trout_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_sucker_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_toad_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_turtle_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_vireo_rf.RData")
 
-# future temperature estimates, all COMID, by model
-load(file = '../../Jenny/AirTemp/Modeling/MIROC5_stream_temp.RData')
-load(file = '../../Jenny/AirTemp/Modeling/CCSM4_stream_temp.RData')
-load(file = '../../Jenny/AirTemp/Modeling/CanESM2_stream_temp.RData')
+clusters<- st_read("../../Jenny/RB4/StreamCat/COMID clustering.shp") %>% 
+  data.frame() %>% 
+  dplyr::select(COMID, clstrCt, dam) %>% 
+  filter(clstrCt == 1 & dam == 0 )
 
-# flow
-futest <- crossing(
-  dts = c('dt1', 'dt2'),
-  spp = c('chub', 'sucker', 'toad', 'trout', 'turtle', 'vireo'),
-  mds = c('CanESM2', 'CCSM4', 'MIROC5')
-  ) %>% 
-  group_by(dts, spp, mds) %>% 
-  nest %>% 
+NHD <- st_read("../../Jenny/RB4/WorkingData_3-16-18/NHDFLowline_Clip.shp") %>% 
+  filter(FTYPE == "StreamRiver") %>% 
+  dplyr::select(COMID) %>% 
+  st_zm()
+
+wtrshd_bndry<- st_read("../../Jenny/RB4/WorkingData_3-16-18/RB4watershedBoundaty.shp") %>% 
+  dplyr::select(NAME) %>% 
+  st_zm()
+
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/canesm2flowmetdt1.RData")
+canesm2flowmetdt1 <- canesm2flowmetdt1 %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est)
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/canesm2flowmetdt2.RData")
+canesm2flowmetdt2 <- canesm2flowmetdt2 %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est)
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/ccsm4flowmetdt1.RData")
+ccsm4flowmetdt1 <- ccsm4flowmetdt1 %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est)
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/ccsm4flowmetdt2.RData")
+ccsm4flowmetdt2 <- ccsm4flowmetdt2 %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est)
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/miroc5flowmetdt1.RData")
+miroc5flowmetdt1 <- miroc5flowmetdt1 %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est)
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/miroc5flowmetdt2.RData")
+miroc5flowmetdt2 <- miroc5flowmetdt2 %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est)
+
+trout_CanESM2_2040_flow <- (predict(mod_trout_rf, newdata = canesm2flowmetdt1, type = "prob"))[,2]
+trout_CanESM2_2100_flow <- (predict(mod_trout_rf, newdata = canesm2flowmetdt2, type = "prob"))[,2]
+trout_ccsm4_2040_flow <- (predict(mod_trout_rf, newdata = ccsm4flowmetdt1, type = "prob"))[,2]
+trout_ccsm4_2100_flow <- (predict(mod_trout_rf, newdata = ccsm4flowmetdt2, type = "prob"))[,2]
+trout_miroc5_2040_flow <- (predict(mod_trout_rf, newdata = miroc5flowmetdt1, type = "prob"))[,2]
+trout_miroc5_2100_flow <- (predict(mod_trout_rf, newdata = miroc5flowmetdt2, type = "prob"))[,2]
+
+chub_CanESM2_2040_flow <- (predict(mod_chub_rf, newdata = canesm2flowmetdt1, type = "prob"))[,2]
+chub_CanESM2_2100_flow <- (predict(mod_chub_rf, newdata = canesm2flowmetdt2, type = "prob"))[,2]
+chub_ccsm4_2040_flow <- (predict(mod_chub_rf, newdata = ccsm4flowmetdt1, type = "prob"))[,2]
+chub_ccsm4_2100_flow <- (predict(mod_chub_rf, newdata = ccsm4flowmetdt2, type = "prob"))[,2]
+chub_miroc5_2040_flow <- (predict(mod_chub_rf, newdata = miroc5flowmetdt1, type = "prob"))[,2]
+chub_miroc5_2100_flow <- (predict(mod_chub_rf, newdata = miroc5flowmetdt2, type = "prob"))[,2]
+
+suc_CanESM2_2040_flow <- (predict(mod_sucker_rf, newdata = canesm2flowmetdt1, type = "prob"))[,2]
+suc_CanESM2_2100_flow <- (predict(mod_sucker_rf, newdata = canesm2flowmetdt2, type = "prob"))[,2]
+suc_ccsm4_2040_flow <- (predict(mod_sucker_rf, newdata = ccsm4flowmetdt1, type = "prob"))[,2]
+suc_ccsm4_2100_flow <- (predict(mod_sucker_rf, newdata = ccsm4flowmetdt2, type = "prob"))[,2]
+suc_miroc5_2040_flow <- (predict(mod_sucker_rf, newdata = miroc5flowmetdt1, type = "prob"))[,2]
+suc_miroc5_2100_flow <- (predict(mod_sucker_rf, newdata = miroc5flowmetdt2, type = "prob"))[,2]
+
+toad_CanESM2_2040_flow <- (predict(mod_toad_rf, newdata = canesm2flowmetdt1, type = "prob"))[,2]
+toad_CanESM2_2100_flow <- (predict(mod_toad_rf, newdata = canesm2flowmetdt2, type = "prob"))[,2]
+toad_ccsm4_2040_flow <- (predict(mod_toad_rf, newdata = ccsm4flowmetdt1, type = "prob"))[,2]
+toad_ccsm4_2100_flow <- (predict(mod_toad_rf, newdata = ccsm4flowmetdt2, type = "prob"))[,2]
+toad_miroc5_2040_flow <- (predict(mod_toad_rf, newdata = miroc5flowmetdt1, type = "prob"))[,2]
+toad_miroc5_2100_flow <- (predict(mod_toad_rf, newdata = miroc5flowmetdt2, type = "prob"))[,2]
+
+vireo_CanESM2_2040_flow <- (predict(mod_vireo_rf, newdata = canesm2flowmetdt1, type = "prob"))[,2]
+vireo_CanESM2_2100_flow <- (predict(mod_vireo_rf, newdata = canesm2flowmetdt2, type = "prob"))[,2]
+vireo_ccsm4_2040_flow <- (predict(mod_vireo_rf, newdata = ccsm4flowmetdt1, type = "prob"))[,2]
+vireo_ccsm4_2100_flow <- (predict(mod_vireo_rf, newdata = ccsm4flowmetdt2, type = "prob"))[,2]
+vireo_miroc5_2040_flow <- (predict(mod_vireo_rf, newdata = miroc5flowmetdt1, type = "prob"))[,2]
+vireo_miroc5_2100_flow <- (predict(mod_vireo_rf, newdata = miroc5flowmetdt2, type = "prob"))[,2]
+
+turtle_CanESM2_2040_flow <- (predict(mod_turtle_rf, newdata = canesm2flowmetdt1, type = "prob"))[,2]
+turtle_CanESM2_2100_flow <- (predict(mod_turtle_rf, newdata = canesm2flowmetdt2, type = "prob"))[,2]
+turtle_ccsm4_2040_flow <- (predict(mod_turtle_rf, newdata = ccsm4flowmetdt1, type = "prob"))[,2]
+turtle_ccsm4_2100_flow <- (predict(mod_turtle_rf, newdata = ccsm4flowmetdt2, type = "prob"))[,2]
+turtle_miroc5_2040_flow <- (predict(mod_turtle_rf, newdata = miroc5flowmetdt1, type = "prob"))[,2]
+turtle_miroc5_2100_flow <- (predict(mod_turtle_rf, newdata = miroc5flowmetdt2, type = "prob"))[,2]
+
+
+fut_flow <- cbind(canesm2flowmetdt1[,1], 
+                  trout_CanESM2_2040_flow,trout_CanESM2_2100_flow, trout_ccsm4_2040_flow, trout_ccsm4_2100_flow, trout_miroc5_2040_flow, trout_miroc5_2100_flow,
+                  chub_CanESM2_2040_flow, chub_CanESM2_2100_flow,chub_ccsm4_2040_flow, chub_ccsm4_2100_flow,chub_miroc5_2040_flow,  chub_miroc5_2100_flow,
+                  suc_CanESM2_2040_flow, suc_CanESM2_2100_flow, suc_ccsm4_2040_flow, suc_ccsm4_2100_flow,suc_miroc5_2040_flow,suc_miroc5_2100_flow,
+                  toad_CanESM2_2040_flow, toad_CanESM2_2100_flow, toad_ccsm4_2040_flow, toad_ccsm4_2100_flow, toad_miroc5_2040_flow, toad_miroc5_2100_flow,
+                  vireo_CanESM2_2040_flow, vireo_CanESM2_2100_flow, vireo_ccsm4_2040_flow, vireo_ccsm4_2100_flow, vireo_miroc5_2040_flow, vireo_miroc5_2100_flow,
+                  turtle_CanESM2_2040_flow, turtle_CanESM2_2100_flow, turtle_ccsm4_2040_flow, turtle_ccsm4_2100_flow, turtle_miroc5_2040_flow, turtle_miroc5_2100_flow)
+
+rm(trout_CanESM2_2040_flow,trout_CanESM2_2100_flow, trout_ccsm4_2040_flow, trout_ccsm4_2100_flow, trout_miroc5_2040_flow, trout_miroc5_2100_flow,
+   chub_CanESM2_2040_flow, chub_CanESM2_2100_flow,chub_ccsm4_2040_flow, chub_ccsm4_2100_flow,chub_miroc5_2040_flow,  chub_miroc5_2100_flow,
+   suc_CanESM2_2040_flow, suc_CanESM2_2100_flow, suc_ccsm4_2040_flow, suc_ccsm4_2100_flow,suc_miroc5_2040_flow,suc_miroc5_2100_flow,
+   toad_CanESM2_2040_flow, toad_CanESM2_2100_flow, toad_ccsm4_2040_flow, toad_ccsm4_2100_flow, toad_miroc5_2040_flow, toad_miroc5_2100_flow,
+   vireo_CanESM2_2040_flow, vireo_CanESM2_2100_flow, vireo_ccsm4_2040_flow, vireo_ccsm4_2100_flow, vireo_miroc5_2040_flow, vireo_miroc5_2100_flow,
+   turtle_CanESM2_2040_flow, turtle_CanESM2_2100_flow, turtle_ccsm4_2040_flow, turtle_ccsm4_2100_flow, turtle_miroc5_2040_flow, turtle_miroc5_2100_flow)
+#Future air temperature predictions
+#need to get the predictions from the Air_temp_future.R file
+# MIROC5_stream_temp<- MIROC5_stream_temp %>%
+#   filter(year %in% c(2040, 2100))
+# names(MIROC5_stream_temp)[5:10]<- paste(names(MIROC5_stream_temp)[5:10], "miroc5_temp", sep = "_")
+# 
+# CCSM4_stream_temp<- CCSM4_stream_temp %>%
+#   filter(year %in% c(2040, 2100))
+# names(CCSM4_stream_temp)[5:10]<- paste(names(CCSM4_stream_temp)[5:10], "ccsm4_temp", sep = "_")
+# 
+# CanESM2_stream_temp<- CanESM2_stream_temp %>%
+#   filter(year %in% c(2040, 2100))
+# names(CanESM2_stream_temp)[5:10]<- paste(names(CanESM2_stream_temp)[5:10], "CanESM2_temp", sep = "_")
+# 
+# fut_temp<- cbind(MIROC5_stream_temp, CCSM4_stream_temp, CanESM2_stream_temp)
+# fut_temp<- fut_temp %>%
+#   select(-c(11:14, 21:24))
+# 
+# save(fut_temp, file = 'L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/fut_temp.RData')
+load('L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/fut_temp.RData')
+
+fut_temp_2040<-fut_temp %>% 
+  filter(year %in% 2040) %>% 
+  select(-(2:4))
+names(fut_temp_2040)[2:19]<- paste(names(fut_temp_2040)[2:19], "2040", sep = "_")
+
+fut_temp_2100<-fut_temp %>% 
+  filter(year %in% 2100)%>% 
+  select(-(2:4))
+names(fut_temp_2100)[2:19]<- paste(names(fut_temp_2100)[2:19], "2100", sep = "_")
+
+fut_temp<-left_join(fut_temp_2040, fut_temp_2100, by = "COMID")
+
+future_predictions<- left_join(fut_temp, fut_flow, by = "COMID")
+
+future_predictions<- left_join(NHD, future_predictions, by = "COMID") 
+
+#need to calculate the syntheized temperature
+future_predictions<- future_predictions %>% 
+  mutate(trout_CanESM2_2040_syn = pmin(trout_CanESM2_2040_flow, trout_CanESM2_temp_2040),
+         trout_CanESM2_2100_syn = pmin(trout_CanESM2_2100_flow, trout_CanESM2_temp_2100),
+         trout_ccsm4_2040_syn = pmin(trout_ccsm4_2040_flow, trout_ccsm4_temp_2040),
+         trout_ccsm4_2100_syn = pmin(trout_ccsm4_2100_flow, trout_ccsm4_temp_2100),
+         trout_miroc5_2040_syn = pmin(trout_miroc5_2040_flow, trout_miroc5_temp_2040),
+         trout_miroc5_2100_syn = pmin(trout_miroc5_2100_flow, trout_miroc5_temp_2100),
+         chub_CanESM2_2040_syn = pmin(chub_CanESM2_2040_flow, chub_CanESM2_temp_2040),
+         chub_CanESM2_2100_syn = pmin(chub_CanESM2_2100_flow, chub_CanESM2_temp_2100),
+         chub_ccsm4_2040_syn = pmin(chub_ccsm4_2040_flow, chub_ccsm4_temp_2040),
+         chub_ccsm4_2100_syn = pmin(chub_ccsm4_2100_flow, chub_ccsm4_temp_2100),
+         chub_miroc5_2040_syn = pmin(chub_miroc5_2040_flow, chub_miroc5_temp_2040),
+         chub_miroc5_2100_syn = pmin(chub_miroc5_2100_flow, chub_miroc5_temp_2100),
+         suc_CanESM2_2040_syn = pmin(suc_CanESM2_2040_flow, sucker_CanESM2_temp_2040),
+         suc_CanESM2_2100_syn = pmin(suc_CanESM2_2100_flow, sucker_CanESM2_temp_2100),
+         suc_ccsm4_2040_syn = pmin(suc_ccsm4_2040_flow, sucker_ccsm4_temp_2040),
+         suc_ccsm4_2100_syn = pmin(suc_ccsm4_2100_flow, sucker_ccsm4_temp_2100),
+         suc_miroc5_2040_syn = pmin(suc_miroc5_2040_flow, sucker_miroc5_temp_2040),
+         suc_miroc5_2100_syn = pmin(suc_miroc5_2100_flow, sucker_miroc5_temp_2100),
+         vireo_CanESM2_2040_syn = pmin(vireo_CanESM2_2040_flow, vireo_CanESM2_temp_2040),
+         vireo_CanESM2_2100_syn = pmin(vireo_CanESM2_2100_flow, vireo_CanESM2_temp_2100),
+         vireo_ccsm4_2040_syn = pmin(vireo_ccsm4_2040_flow, vireo_ccsm4_temp_2040),
+         vireo_ccsm4_2100_syn = pmin(vireo_ccsm4_2100_flow, vireo_ccsm4_temp_2100),
+         vireo_miroc5_2040_syn = pmin(vireo_miroc5_2040_flow, vireo_miroc5_temp_2040),
+         vireo_miroc5_2100_syn = pmin(vireo_miroc5_2100_flow, vireo_miroc5_temp_2100),
+         toad_CanESM2_2040_syn = pmin(toad_CanESM2_2040_flow, toad_CanESM2_temp_2040),
+         toad_CanESM2_2100_syn = pmin(toad_CanESM2_2100_flow, toad_CanESM2_temp_2100),
+         toad_ccsm4_2040_syn = pmin(toad_ccsm4_2040_flow, toad_ccsm4_temp_2040),
+         toad_ccsm4_2100_syn = pmin(toad_ccsm4_2100_flow, toad_ccsm4_temp_2100),
+         toad_miroc5_2040_syn = pmin(toad_miroc5_2040_flow, toad_miroc5_temp_2040),
+         toad_miroc5_2100_syn = pmin(toad_miroc5_2100_flow, toad_miroc5_temp_2100),
+         turtle_CanESM2_2040_syn = pmin(turtle_CanESM2_2040_flow, turtle_CanESM2_temp_2040),
+         turtle_CanESM2_2100_syn = pmin(turtle_CanESM2_2100_flow, turtle_CanESM2_temp_2100),
+         turtle_ccsm4_2040_syn = pmin(turtle_ccsm4_2040_flow, turtle_ccsm4_temp_2040),
+         turtle_ccsm4_2100_syn = pmin(turtle_ccsm4_2100_flow, turtle_ccsm4_temp_2100),
+         turtle_miroc5_2040_syn = pmin(turtle_miroc5_2040_flow, turtle_miroc5_temp_2040),
+         turtle_miroc5_2100_syn = pmin(turtle_miroc5_2100_flow, turtle_miroc5_temp_2100)
+  )
+
+future_predictions<- future_predictions[complete.cases(future_predictions$trout_miroc5_temp_2040),]
+
+# format for use with app
+futest <- future_predictions %>% 
+  st_set_geometry(NULL) %>% 
+  gather('var', 'prd', -COMID) %>% 
   mutate(
-    data = purrr::pmap(list(dts, spp, mds), function(dts, spp, mds){
-      
-      # flow metric model
-      flwmod <- paste('mod', spp, 'rf', sep = '_') %>% 
-        metmods[[.]]
-      
-      # temp metric model
-      tmpmod <- paste(spp, 'mdl', sep = '_') %>% 
-        metmods[[.]]
-      
-      # flow metric data to predict
-      flwdat <- mds %>% 
-        tolower %>% 
-        paste0('flowmet', dts) %>% 
-        get() %>% 
-        dplyr::select(COMID, var, est) %>% 
-        spread(var, est)
-
-      # temperature metric data to predict
-      tmpdt <- case_when(
-        dts == 'dt1' ~ 2040, 
-        dts == 'dt2' ~ 2100
-      )
-      tmpdat <- mds %>% 
-        paste0('_stream_temp') %>% 
-        get %>%
-        filter(year %in% tmpdt)
-      
-      # flow metric predictions
-      flwprd <- predict(flwmod, newdata = flwdat, type = 'prob') %>% 
-        .[, 2]
-      
-      # temperature metric predictions
-      tmpprd <- predict(tmpmod, newdata = tmpdat, type = 'response')
-      
-      # sanity heck
-      stopifnot(identical(flwdat$COMID, tmpdat$COMID))
-      
-      # combine output
-      out <- tibble(
-        COMID = flwdat$COMID, 
-        tmpprd = tmpprd, 
-        flwprd = flwprd
-        ) %>% 
-        rowwise %>% 
-        mutate(
-          allprd = min(tmpprd, flwprd, na.rm = T), 
-          allprd = ifelse(is.infinite(allprd), NA, allprd)
-        ) %>% 
-        select(COMID, allprd)
-      
-      return(out)
-      
-    })
+    mettyp = case_when(
+      grepl('flow$', var) ~ 'flow',
+      grepl('temp', var) ~ 'temp',
+      grepl('syn$', var) ~ 'syn'
+    ), 
+    var = gsub('\\_temp|\\_flow$|\\_syn$', '', var)
   ) %>% 
-  unnest
+  separate(var, c('spp', 'mds','dts'), sep = '_') %>% 
+  mutate(
+    spp = case_when(
+      spp %in% c('suc', 'sucker') ~ 'sucker', 
+      T ~ spp
+    ),
+    mds = case_when(
+      mds == 'ccsm4' ~ 'CCSM4', 
+      mds == 'miroc5' ~ 'MIROC5', 
+      T ~ mds
+    )
+  )
 
-save(futest, file = here('data', 'futest.RData'), compress = 'xz')
-
+save(futest, file = 'data/futest.RData', compress = 'xz')
 
 # All reaches, filtered by locations for future predictions ---------------
 
