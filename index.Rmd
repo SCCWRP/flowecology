@@ -31,13 +31,11 @@ data(allrchdat)
 data(bioflowmetest)
 data(biotmpmet)
 data(futest)
-data(bsflowmetest)
-data(bstmpmetest)
-data(metmods)
+data(bsest)
 
 # color palette function for prob map
 pal <- colorNumeric(
-  palette = RColorBrewer::brewer.pal(11, 'Spectral'),
+  palette = RColorBrewer::brewer.pal(11, 'RdYlBu'),
   na.color = NA,
   domain = c(0, 1)
 )
@@ -292,123 +290,45 @@ column(12,
 ```{r}
 column(width = 12,
 
-       column(width = 4,
+    column(width = 4,
 
-              # select species to show
-              selectInput("spmapbs", "Choose species:", sort(unique(biodat$name)))
+          # select species to show
+          selectInput("spmapbs", "Choose species:", choices = list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle'))
 
-        ),
+    ),
 
-       column(width = 4,
+    column(width = 4,
 
-              # select metric type
-              selectInput("mettyp", "Select predictor type:", choices = c('Flow', 'Temperature'))
+          # select prediction type
+          selectInput("bsmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'Synthesis')
 
-        ),
+    ),
 
-       column(width = 4,
+    column(width = 4,
+          
+          # select baseline conditions
+          selectInput('bstyp', 'Select baseline conditions:', choices = list(`dry (2014)` = '2014', `moderate (2010)` = '2010', `wet (1993)` = '1993'))
 
-              renderUI({
-
-                # input
-                mettyp <- input$mettyp
-
-                if(mettyp == 'Flow')
-                  sels <- list(dry = '2014-07-01', moderate = '2010-07-01', wet = '1993-07-01')
-
-                if(mettyp == 'Temperature')
-                  sels <- bstmpmetest %>% pull(year) %>% unique %>% sort
-
-                selectInput('bstyp', 'Select baseline conditions:', choices = sels)
-
-              })
-
-        )
+    )
 
 )
 ```
 
 ```{r}
-# model to use from species selection and metric type selection
-spmod <- reactive({
-
-  # input
-  spmapbs <- input$spmapbs
-  mettyp <- input$mettyp
-
-  req(spmapbs)
-
-  modnm <- gsub('^.*\\s(.*)$', '\\1', spmapbs)
-
-  if(mettyp == 'Flow')
-    modnm <- modnm %>%
-      paste0('mod_', ., '_rf')
-
-  if(mettyp == 'Temperature')
-    modnm <- modnm %>%
-      paste0(., '_mdl')
-
-  out <- metmods[[modnm]]
-
-  return(out)
-
-})
-
-# baseline metrics to use
-bsmets <- reactive({
-
-  # input
-  bstyp <- input$bstyp
-  mettyp <- input$mettyp
-
-  req(bstyp)
-
-  # filter baseline metrics by year selection
-  if(mettyp == 'Flow'){
-
-    req(bstyp %in% as.character(bsflowmetest$dtsl))
-
-    out <- bsflowmetest %>%
-      filter(dtsl %in% as.Date(bstyp)) %>%
-      dplyr::select(var, COMID, est) %>%
-      spread(var, est)
-
-  }
-
-  if(mettyp == 'Temperature'){
-
-    req(bstyp %in% bstmpmetest$year)
-
-    out <- bstmpmetest %>%
-      filter(year %in% bstyp)
-
-  }
-
-  return(out)
-
-})
-
 # probability of occurrence predictions for species and baseline condition
 bsprds <- reactive({
 
   # input
-  spmod <- spmod()
-  bsmets <- bsmets()
-  mettyp <- input$mettyp
-
-  if(mettyp == 'Flow')
-    prds <- predict(spmod, newdata = bsmets, type = 'prob')[, 2, drop = T]
-
-  if(mettyp == 'Temperature')
-    prds <- predict(spmod, newdata = bsmets, type = 'response')
-
-  # get predictions by comid
-  out <- bsmets %>%
-    mutate(
-      procc = prds
-    ) %>%
-    dplyr::select(COMID, procc)
-
+  spmapbs <- input$spmapbs
+  bsmettyp <- input$bsmettyp
+  bstyp <- input$bstyp
+  
+  # filter baseline predictions
+  out <- bsest %>% 
+    filter(spp %in% spmapbs) %>% 
+    filter(dts %in% bstyp) %>% 
+    filter(bsmettyp %in% !!bsmettyp)
+  
   return(out)
 
 })
@@ -427,10 +347,10 @@ bsprdsmap <- reactive({
     clearMarkers() %>%
     clearShapes() %>%
     clearControls() %>%
-    addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(procc),
-      label = ~as.character(round(procc, 2))
+    addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(prd),
+      label = ~as.character(round(prd, 2))
       ) %>% 
-    addLegend(data = tomapbs, "topright", pal = pal, values = ~procc,
+    addLegend(data = tomapbs, "topright", pal = pal, values = ~prd,
               title = "Pr. occurence", opacity = 1
     )
 
@@ -459,7 +379,7 @@ column(width = 12,
        column(width = 3,
               
               # select metric type
-              selectInput("clmmod", "Select climate model", choices = list(CanESM2 = 'CanESM2', CCSM4 = 'CCSM4', MIROC5 = 'MIROC5'))
+              selectInput("clmmod", "Select climate model", choices = list('CanESM2' = 'CanESM2', 'CCSM4' = 'CCSM4', 'MIROC5' = 'MIROC5'))
        
         ),
        
@@ -473,7 +393,7 @@ column(width = 12,
        column(width = 3, 
               
               # select prediction type year  
-              selectInput("futmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'))
+              selectInput("futmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'syn')
               
         )
        

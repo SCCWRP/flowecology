@@ -174,6 +174,188 @@ bstmpmetest <- baseline_stream_temp %>%
 
 save(bstmpmetest, file = 'data/bstmpmetest.RData', compress = 'xz')
 
+# get baseline predictions ------------------------------------------------
+
+# original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
+
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/bsflowmetest.RData")
+bsflowmetest <- bsflowmetest %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est) %>% 
+  dplyr::filter(COMID %in% clusters$COMID) %>% 
+  select(-tenyr)
+
+load(file= "../../Jenny/RB4/FlowModel/mod_chub_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_trout_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_sucker_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_toad_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_turtle_rf.RData")
+load(file= "../../Jenny/RB4/FlowModel/mod_vireo_rf.RData")
+
+# predictions based on baseline random forest flow metrics
+trout_bs_flow <- (predict(mod_trout_rf, newdata = bsflowmetest, type = "prob"))[,2]
+chub_bs_flow <- (predict(mod_chub_rf, newdata = bsflowmetest, type = "prob"))[,2]
+suc_bs_flow <- (predict(mod_sucker_rf, newdata = bsflowmetest, type = "prob"))[,2]
+toad_bs_flow <- (predict(mod_toad_rf, newdata = bsflowmetest, type = "prob"))[,2]
+turtle_bs_flow <- (predict(mod_turtle_rf, newdata = bsflowmetest, type = "prob"))[,2]
+vireo_bs_flow <- (predict(mod_vireo_rf, newdata = bsflowmetest, type = "prob"))[,2]
+
+NHD <- st_read("../../Jenny/RB4/WorkingData_3-16-18/NHDFLowline_Clip.shp")  %>% 
+  filter(FTYPE == "StreamRiver") %>% 
+  select(COMID) %>% 
+  st_zm()
+
+wtrshd_bndry<- st_read("../../Jenny/RB4/WorkingData_3-16-18/RB4watershedBoundaty.shp") %>% 
+  select(NAME) %>% 
+  st_zm()
+
+spcs_occrrnce <- st_read("../../Jenny/RB4/WorkingData_3-16-18/species_occurrence_unique_NHDFlowline_JOIN_NAD83.shp") %>% 
+  filter(name %in% c("rainbow trout", "arroyo chub", "santa ana sucker", "arroyo toad", "southwestern pond turtle", "least bell's vireo")) %>% 
+  filter(occurrence == 1) %>% 
+  select(name, occurrence, COMID, date) %>% 
+  st_zm()
+#clip species data to just the points within the watershed boundaries
+spcs_occrrnce<- spcs_occrrnce[wtrshd_bndry,]
+
+clusters<- st_read("../../Jenny/RB4/StreamCat/COMID clustering.shp") %>% 
+  data.frame() %>% 
+  dplyr::select(COMID, clstrCt, dam) %>% 
+  filter(clstrCt == 1 & dam == 0 )
+
+baseline <- cbind(bsflowmetest, trout_bs_flow, chub_bs_flow, suc_bs_flow, toad_bs_flow, turtle_bs_flow, vireo_bs_flow)
+
+
+#predictions based on baseline temperature logistic regression  
+vireo_temp<- st_read("L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/prob maps/vireo.shp")%>% 
+  filter(COMID %in% NHD$COMID)
+sucker_temp<- st_read("L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/prob maps/sucker.shp")%>% 
+  filter(COMID %in% NHD$COMID)
+trout_temp<- st_read("L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/prob maps/trout.shp") %>% 
+  filter(COMID %in% NHD$COMID)
+chub_temp<- st_read("L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/prob maps/chub.shp")%>% 
+  filter(COMID %in% NHD$COMID)
+toad_temp<- st_read("L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/prob maps/toad.shp")%>% 
+  filter(COMID %in% NHD$COMID)
+turtle_temp<- st_read("L:/Flow ecology and climate change_ES/Jenny/AirTemp/Modeling/prob maps/turtle.shp")%>% 
+  filter(COMID %in% NHD$COMID)
+
+baseline$year <- year(baseline$dtsl)
+
+#prep dataframes
+chub_syn<- left_join(chub_temp, baseline, by = c("COMID", "year")) %>% 
+  select(COMID, year, chub, chub_bs_flow) %>% 
+  filter(COMID %in% clusters$COMID) %>% 
+  st_set_geometry(NULL) %>% 
+  mutate(
+    syn = pmin(chub_bs_flow, chub),
+    syn = as.numeric(syn),
+    spp = 'chub'
+  ) %>% 
+  select(
+    COMID, 
+    spp, 
+    dts = year, 
+    flow = chub_bs_flow, 
+    temp = chub,
+    syn = syn
+  )
+
+trout_syn <- left_join(trout_temp, baseline, by = c("COMID", "year")) %>% 
+  select(COMID, year, trout, trout_bs_flow) %>% 
+  filter(COMID %in% clusters$COMID) %>% 
+  st_set_geometry(NULL) %>% 
+  mutate(
+    syn = pmin(trout_bs_flow, trout),
+    syn = as.numeric(syn),
+    spp = 'trout'
+  ) %>% 
+  select(
+    COMID, 
+    spp, 
+    dts = year, 
+    flow = trout_bs_flow, 
+    temp = trout,
+    syn = syn
+  )
+
+suc_syn<- left_join(sucker_temp, baseline, by = c("COMID", "year")) %>% 
+  select(COMID, year, suckr, suc_bs_flow) %>% 
+  filter(COMID %in% clusters$COMID) %>% 
+  st_set_geometry(NULL) %>% 
+  mutate(
+    syn = pmin(suc_bs_flow, suckr),
+    syn = as.numeric(syn),
+    spp = 'sucker'
+  ) %>% 
+  select(
+    COMID, 
+    spp, 
+    dts = year, 
+    flow = suc_bs_flow, 
+    temp = suckr,
+    syn = syn
+  )
+
+vireo_syn<- left_join(vireo_temp, baseline, by = c("COMID", "year")) %>% 
+  select(COMID, year, vireo, vireo_bs_flow) %>% 
+  filter(COMID %in% clusters$COMID) %>% 
+  st_set_geometry(NULL) %>% 
+  mutate(
+    syn = pmin(vireo_bs_flow, vireo),
+    syn = as.numeric(syn),
+    spp = 'vireo'
+  ) %>% 
+  select(
+    COMID, 
+    spp, 
+    dts = year, 
+    flow = vireo_bs_flow, 
+    temp = vireo,
+    syn = syn
+  )
+
+toad_syn<- left_join(toad_temp, baseline, by = c("COMID", "year")) %>% 
+  select(COMID, year, toad, toad_bs_flow) %>% 
+  filter(COMID %in% clusters$COMID) %>% 
+  st_set_geometry(NULL) %>% 
+  mutate(
+    syn = pmin(toad_bs_flow, toad),
+    syn = as.numeric(syn),
+    spp = 'toad'
+  ) %>% 
+  select(
+    COMID, 
+    spp, 
+    dts = year, 
+    flow = toad_bs_flow, 
+    temp = toad,
+    syn = syn
+  )
+
+turtle_syn<- left_join(turtle_temp, baseline, by = c("COMID", "year")) %>% 
+  select(COMID, year, turtl, turtle_bs_flow) %>% 
+  filter(COMID %in% clusters$COMID) %>% 
+  st_set_geometry(NULL) %>% 
+  mutate(
+    syn = pmin(turtle_bs_flow, turtl),
+    syn = as.numeric(syn),
+    spp = 'turtle'
+  ) %>% 
+  select(
+    COMID, 
+    spp, 
+    dts = year, 
+    flow = turtle_bs_flow, 
+    temp = turtl,
+    syn = syn
+  )
+
+bsest <- rbind(chub_syn, vireo_syn, trout_syn, toad_syn, turtle_syn, suc_syn) %>% 
+  gather('bsmettyp', 'prd', flow, syn, temp) %>% 
+  select(COMID, spp, dts, prd, bsmettyp)
+
+save(bsest, file = here('data', 'bsest.RData'), compress = 'xz')
+
 # get future predictions --------------------------------------------------
 
 # original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
