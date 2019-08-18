@@ -91,14 +91,6 @@ rchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcu
 
 save(rchdat, file = 'data/rchdat.RData', compress = 'xz')
 
-# Flow metrics -----------------------------------------------------------------
-
-# flow metrics calculated where biology was observed
-file.copy('../flowmetrics/data/bioflowmetest.RData', 'data/')
-
-# baseline flow metrics, all COMIDs
-file.copy('../flowmetrics/data/bsflowmetest.RData', 'data/')
-
 # Flow and temperature metrics with observed bio presence/absence -------------------------
 
 # original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
@@ -275,69 +267,6 @@ obsbiomet <- bioflomet %>%
   bind_rows(biotmpmet)
 
 save(obsbiomet, file = 'data/obsbiomet.RData', compress = 'xz')
-
-# RF models for flow metrics, GLMs for temp metrics -----------------------
-
-# RF mods for flow
-file.copy('../data_and_scripts/mod_chub_rf.RData', 'raw/')
-file.copy('../data_and_scripts/mod_sucker_rf.RData', 'raw/')
-file.copy('../data_and_scripts/mod_toad_rf.RData', 'raw/')
-file.copy('../data_and_scripts/mod_trout_rf.RData', 'raw/')
-file.copy('../data_and_scripts/mod_turtle_rf.RData', 'raw/')
-file.copy('../data_and_scripts/mod_vireo_rf.RData', 'raw/')
-
-# GLMs for temp
-file.copy('../../Jenny/AirTemp/Modeling/chub_mdl.rda', 'raw/')
-file.copy('../../Jenny/AirTemp/Modeling/suc_mdl.rda', 'raw/sucker_mdl.rda')
-load(file = 'raw/sucker_mdl.rda')
-sucker_mdl <- suc_mdl
-save(sucker_mdl, file = 'raw/sucker_mdl.rda')
-file.copy('../../Jenny/AirTemp/Modeling/toad_mdl.rda', 'raw/')
-file.copy('../../Jenny/AirTemp/Modeling/trout_mdl.rda', 'raw/')
-file.copy('../../Jenny/AirTemp/Modeling/turtle_mdl.rda', 'raw/')
-file.copy('../../Jenny/AirTemp/Modeling/vireo_mdl.rda', 'raw/')
-
-# load all and save to single object
-load(file = 'raw/mod_chub_rf.RData')
-load(file = 'raw/mod_sucker_rf.RData')
-load(file = 'raw/mod_toad_rf.RData')
-load(file = 'raw/mod_trout_rf.RData')
-load(file = 'raw/mod_turtle_rf.RData')
-load(file = 'raw/mod_vireo_rf.RData')
-load(file = 'raw/chub_mdl.rda')
-load(file = 'raw/sucker_mdl.rda')
-load(file = 'raw/toad_mdl.rda')
-load(file = 'raw/trout_mdl.rda')
-load(file = 'raw/turtle_mdl.rda')
-load(file = 'raw/vireo_mdl.rda')
-
-# combine all in list
-metmods <- list(
-  mod_chub_rf = mod_chub_rf,
-  mod_sucker_rf = mod_sucker_rf,
-  mod_toad_rf = mod_toad_rf,
-  mod_trout_rf = mod_trout_rf,
-  mod_turtle_rf = mod_turtle_rf,
-  mod_vireo_rf = mod_vireo_rf,
-  chub_mdl = chub_mdl,
-  sucker_mdl = sucker_mdl,
-  toad_mdl = toad_mdl,
-  trout_mdl = trout_mdl,
-  turtle_mdl = turtle_mdl,
-  vireo_mdl = vireo_mdl
-)
-
-save(metmods, file = 'data/metmods.RData', compress = 'xz')
-
-
-# baseline temperature estimates for each COMID ---------------------------
-
-load(file = '../../Jenny/AirTemp/Modeling/baseline_stream_temp.RData')
-
-bstmpmetest <- baseline_stream_temp %>% 
-  ungroup
-
-save(bstmpmetest, file = 'data/bstmpmetest.RData', compress = 'xz')
 
 # get baseline predictions ------------------------------------------------
 

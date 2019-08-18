@@ -155,7 +155,7 @@ spmtdat <- reactive({
   mettypobs <- input$mettypobs
   spmapobs <- input$spmapobs
   
-  req(!is.null(metsel))
+  req(metsel)
     
   # minor format for output
   out <- obsbiomet %>% 
@@ -181,6 +181,8 @@ spmtplt <- reactive({
   spmtdat <- spmtdat()
   metsel <- input$metsel
   
+  req(metsel)
+
   p <- ggplot(spmtdat, aes(x = val, y = as.numeric(occurrbin))) +
     geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
     scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen'), drop = FALSE) +
@@ -233,23 +235,25 @@ column(12,
   ), 
   column(width = 6,
           HTML('<br>'), 
-          renderText({
-            
-            spmtmod <- spmtmod()
-            
-            dat <- spmtmod %>% 
-              summary %>% 
-              coef %>% 
-              .[2, 4] %>% 
-              paste('p =', .)
-            return(dat)
-            
-          }),
+          # renderText({
+          #   
+          #   spmtmod <- spmtmod()
+          #   
+          #   dat <- spmtmod %>% 
+          #     summary %>% 
+          #     coef %>% 
+          #     .[2, 4] %>% 
+          #     paste('p =', .)
+          #   return(dat)
+          #   
+          # }),
           renderUI({
             
             # input
             spmtmod <- spmtmod()
             metsel <- input$metsel
+            
+            req(metsel)
             
             cvars <- c(metsel, 'intercept')
             
