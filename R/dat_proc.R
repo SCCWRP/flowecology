@@ -29,6 +29,16 @@ biodat <- biodat %>%
     occex = ifelse(occurrence == 'present', 7, 3)
   ) %>% 
   filter(name %in% c('arroyo chub', 'arroyo toad', 'least bell\'s vireo', 'rainbow trout', 'santa ana sucker', 'southwestern pond turtle')) %>% 
+  mutate(name = 
+          case_when(
+            name %in% 'arroyo chub' ~ 'chub',
+            name %in% 'arroyo toad' ~ 'toad',
+            name %in% "least bell's vireo" ~ 'vireo',
+            name %in% 'rainbow trout' ~ 'trout',
+            name %in% 'santa ana sucker' ~ 'sucker',
+            name %in% 'southwestern pond turtle' ~ 'turtle'
+        )) %>% 
+  rename(spp = name) %>% 
   st_transform(prj)
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
@@ -88,6 +98,142 @@ file.copy('../flowmetrics/data/bioflowmetest.RData', 'data/')
 
 # baseline flow metrics, all COMIDs
 file.copy('../flowmetrics/data/bsflowmetest.RData', 'data/')
+
+# Flow metrics with observed bio presence/absence -------------------------
+
+# original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
+
+#read in dataframe that has list of COMIDS in unaltered clusters, remove the unaltered COMID's that also happen to be gages
+clusters<- st_read("../../Jenny/RB4/StreamCat/COMID clustering.shp") %>% 
+  data.frame() %>% 
+  select(COMID, clstrCt, dam) %>% 
+  filter(clstrCt == 1 & dam == 0 )
+
+#load baseline predictor.  Need to remove 
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/bsflowmetest.RData")
+bsflowmetest <- bsflowmetest %>% 
+  select(var, COMID, dtsl, est) %>% 
+  spread(var, est) %>% 
+  dplyr::filter(COMID %in% clusters$COMID) %>% 
+  select(-tenyr)
+
+#biological models
+load("../../Jenny/RB4/WorkingData_3-16-18/flowmetrics/data/bioflowmetest.RData")
+bioflowmetest<- bioflowmetest%>% 
+  dplyr::filter(COMID %in% clusters$COMID) %>% 
+  select(-4, -tenyr)
+occurrence<- st_read("../../Jenny/RB4/WorkingData_3-16-18/species_occurrence_unique_NHDFlowline_JOIN_NAD83.shp") %>% 
+  data.frame() %>% 
+  select(name, date, COMID, occurrence)
+occurrence$date<-ymd(occurrence$date)
+occurrence$name<-as.character(occurrence$name)
+
+dat<- left_join(occurrence, bioflowmetest, by = c("name", "date", "COMID")) %>% 
+  unique()
+
+dat <- dat %>% 
+  filter(COMID %in% clusters$COMID)
+
+
+#read in modeled flow metric dataframe and keep only the ones from the gages/ SCR tribs
+gages <- read.csv("../../Jenny/RB4/WorkingData_3-16-18/FlowMetrics_JT.csv") %>% 
+  filter(COMID %in% c(948070372, 22521721, 17585808, 17575785, 17572259, 17567911, 17572335, 22514774,
+                      17574717, 17574705, 17574697, 17574691, 17574683, 17574649, 17574613)) %>% 
+  select(name, date, COMID, occurrence, 8:164, 166 ) 
+
+#bind dat with gages to have final model building dataset
+names(gages) = gsub(pattern = "yr", replacement = "", x = names(gages))
+names(gages)[158]<- "X3yrRBI"
+names(gages)[159]<- "X5yrRBI"
+names(gages)[160]<- "X10yrRBI"
+names(gages)[161]<- "fivyr"
+names(gages)[162]<- "twoyr"
+gages$date<- ymd(gages$date)
+gages$name<- as.character(gages$name)
+gages$COMID<- as.numeric(gages$COMID)
+gages$occurrence<- as.numeric(gages$occurrence)
+gages$x3_MaxMonth <- as.numeric(gages$x3_MaxMonth)
+gages$x3_MinMonth <- as.numeric(gages$x3_MinMonth)
+gages$x5_MaxMonth <- as.numeric(gages$x5_MaxMonth)
+gages$x5_MinMonth <- as.numeric(gages$x5_MinMonth)
+gages$all_MaxMonth <- as.numeric(gages$all_MaxMonth)
+gages$all_MinMonth <- as.numeric(gages$all_MinMonth)
+gages$x10_MaxMonth <- as.numeric(gages$x10_MaxMonth)
+gages$x10_MinMonth <- as.numeric(gages$x10_MinMonth)
+gages$all_MedianNoFlowDays <- as.numeric(gages$all_MedianNoFlowDays)
+gages$all_HighNum  <- as.numeric(gages$all_HighNum )
+#gages <- gages[complete.cases(gages),]
+
+test<- bind_rows(dat, gages)
+
+data<- test
+
+#want to remove duplicate values from the same month (ie if a vireo was found on two separate days in the same month, we dont want to count that twice)
+data$month<-month(data$date)
+data$month<-as.integer(data$month)
+data$year<-year(data$date)
+data<-select(data, -date) %>% 
+  unique
+
+data<-select(data, c(1:3, 162:163, 4:161))
+
+#remove 0 occurrence obs in same month and COMID as a 1 occurrence obs
+data <- data %>% 
+  group_by(name, COMID, year, month) %>% 
+  nest %>% 
+  mutate(
+    nozero = map(data, function(x){
+      
+      # do nothing if all occurrence values are 1 or all are 0
+      if(!any(x$occurrence == 0) | !any(x$occurrence == 1))
+        return(x)
+      
+      # sort by occurrence
+      x <- x %>% 
+        arrange(-occurrence)
+      
+      # duplicated
+      dups <- x %>% 
+        select(-occurrence) %>% 
+        duplicated
+      
+      # filter duplicates and zero occurrence
+      x <- x %>% 
+        filter(!(occurrence == 0 & dups))
+      
+      return(x)
+      
+    })
+  ) %>% 
+  select(-data) %>% 
+  unnest %>% 
+  ungroup
+
+dat <-data %>% 
+  data.frame()
+
+turtle<- dat %>% filter(name == "southwestern pond turtle")#need to get this b4 the complete cases bc can only use the 'all year scenario'
+dat <- dat[complete.cases(dat),] %>% 
+  filter(!name %in% 'southwestern pond turtle') %>% 
+  bind_rows(turtle)
+
+obsbioflo <- dat %>% 
+  rename(
+    spp = name
+  ) %>% 
+  mutate(
+    spp = case_when(
+      spp %in% 'arroyo chub' ~ 'chub',
+      spp %in% 'arroyo toad' ~ 'toad',
+      spp %in% "least bell's vireo" ~ 'vireo',
+      spp %in% 'rainbow trout' ~ 'trout',
+      spp %in% 'santa ana sucker' ~ 'sucker',
+      spp %in% 'southwestern pond turtle' ~ 'turtle'
+    )
+  ) %>% 
+  gather('met', 'val', -spp, -COMID, -year, -month, -occurrence)
+
+save(obsbioflo, file = here('data', 'obsbioflo.RData'), compress = 'xz')
 
 # RF models for flow metrics, GLMs for temp metrics -----------------------
 

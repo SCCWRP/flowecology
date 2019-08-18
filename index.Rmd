@@ -28,8 +28,8 @@ source('R/funcs.R')
 data(biodat)
 data(rchdat)
 data(allrchdat)
-data(bioflowmetest)
 data(biotmpmet)
+data(obsbioflo)
 data(futest)
 data(bsest)
 
@@ -39,6 +39,9 @@ pal <- colorNumeric(
   na.color = NA,
   domain = c(0, 1)
 )
+
+# species choices
+spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
 ```
 
 ### Overview
@@ -73,42 +76,42 @@ All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with 
 ```{r}
 column(width = 12,
 
-       column(width = 4, 
-              
-              # select species to show
-              selectInput("spmapobs", "Choose species:", sort(unique(biodat$name)))
-                
-        ), 
-       
-       column(width = 4,
-              
-              # select metric type
-              selectInput("mettypobs", "Select predictor type:", choices = c('Flow', 'Temperature'))
-       
-        ),
-       
-       column(width = 4, 
-              
-              renderUI({
-                
-                # input
-                mettypobs <- input$mettypobs
-                
-                if(mettypobs == 'Flow'){
-                  tosel <- names(bioflowmetest)
-                }
-              
-                if(mettypobs == 'Temperature'){
-                  tosel <- names(biotmpmet)
-                }
-                
-                tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>', 'year', 'occurrence')]
-                
-                selectInput("metsel", "Select meric:", choices = tosel)
-                
-              })
-              
-        )
+  column(width = 4, 
+        
+        # select species to show
+        selectInput("spmapobs", "Choose species:", choices = spls)
+          
+  ), 
+  
+  column(width = 4,
+        
+        # select metric type
+        selectInput("mettypobs", "Select predictor type:", choices = c('Flow', 'Temperature'))
+  
+  ),
+  
+  column(width = 4, 
+        
+        renderUI({
+          
+          # input
+          mettypobs <- input$mettypobs
+          
+          if(mettypobs == 'Flow'){
+            tosel <- unique(obsbioflo$met)
+          }
+        
+          if(mettypobs == 'Temperature'){
+            tosel <- names(biotmpmet)
+          }
+          
+          tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>', 'year', 'occurrence')]
+          
+          selectInput("metsel", "Select meric:", choices = tosel)
+          
+        })
+        
+  )
        
 )
 ```
@@ -121,7 +124,7 @@ sprct <- reactive({
   spmapobs <- input$spmapobs
   
   out <- biodat %>% 
-    filter(name %in% spmapobs) 
+    filter(spp %in% spmapobs) 
   
   return(out)
   
@@ -159,23 +162,14 @@ spmtdat <- reactive({
   req(!is.null(metsel))
       
   if(mettypobs == 'Flow'){
-  
-    req(metsel %in% names(bioflowmetest))
     
-    # filter metrics
-    mtdat <- bioflowmetest %>% 
-      dplyr::select(name, COMID, date, !!metsel) %>% 
-      filter(name %in% spmapobs)
-  
-    # join species and flow metric data
-    out <- sprct %>% 
-      filter(COMID %in% rchdat$COMID) %>% 
-      left_join(mtdat, by = c('name', 'date', 'COMID')) %>% 
-      st_set_geometry(NULL) %>% 
+    # filter spp, metric, occurrence as factor
+    out <- obsbioflo %>%
+      filter(spp %in% spmapobs) %>% 
+      filter(met %in% metsel) %>% 
       mutate(
-        occurrence = factor(occurrence, levels = c('absent', 'present'))
-      ) %>% 
-      unique
+        occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present'))
+      )
     
   } 
       
@@ -196,14 +190,13 @@ spmtdat <- reactive({
     
   # minor format for output
   out <- out %>% 
-    filter(!is.na(occurrence)) %>% 
     mutate(
       occurrbin = case_when(
         occurrence %in% 'absent' ~ 0, 
         occurrence %in% 'present' ~ 1
       )
-    ) %>% 
-    rename(val = !!metsel)
+    ) #%>% 
+    # rename(val = !!metsel)
   
   return(out)
   
@@ -268,6 +261,18 @@ column(12,
   ), 
   column(width = 6,
           HTML('<br>'), 
+          renderText({
+            
+            spmtmod <- spmtmod()
+            
+            dat <- spmtmod %>% 
+              summary %>% 
+              coef %>% 
+              .[2, 4] %>% 
+              paste('p =', .)
+            return(dat)
+            
+          }),
           renderUI({
             
             # input
@@ -275,7 +280,7 @@ column(12,
             metsel <- input$metsel
             
             cvars <- c(metsel, 'intercept')
-          
+            
             spmtmod %>%
               stargazer(., type = 'html', dep.var.labels = 'presence/absence', covariate.labels = c('metric', 'intercept')) %>% 
               HTML
@@ -293,7 +298,7 @@ column(width = 12,
     column(width = 4,
 
           # select species to show
-          selectInput("spmapbs", "Choose species:", choices = list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle'))
+          selectInput("spmapbs", "Choose species:", choices = spls)
 
     ),
 
@@ -372,7 +377,7 @@ column(width = 12,
        column(width = 3, 
               
               # select species to show
-              selectInput("spmap", "Choose species:", choices = list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle'))
+              selectInput("spmap", "Choose species:", choices = spls)
                 
         ), 
        
