@@ -28,8 +28,7 @@ source('R/funcs.R')
 data(biodat)
 data(rchdat)
 data(allrchdat)
-data(biotmpmet)
-data(obsbioflo)
+data(obsbiomet)
 data(futest)
 data(bsest)
 
@@ -96,17 +95,15 @@ column(width = 12,
           
           # input
           mettypobs <- input$mettypobs
-          
-          if(mettypobs == 'Flow'){
-            tosel <- unique(obsbioflo$met)
-          }
+          spmapobs <- input$spmapobs
+
+          # pull metrics to select based on input
+          tosel <- obsbiomet %>%
+            filter(mettypobs %in% !!mettypobs) %>% 
+            filter(spp %in% spmapobs) %>% 
+            pull(met) %>% 
+            unique
         
-          if(mettypobs == 'Temperature'){
-            tosel <- names(biotmpmet)
-          }
-          
-          tosel <- tosel[!tosel %in% c('name', 'COMID', 'date', '<NA>', 'year', 'occurrence')]
-          
           selectInput("metsel", "Select meric:", choices = tosel)
           
         })
@@ -157,46 +154,21 @@ spmtdat <- reactive({
   metsel <- input$metsel
   mettypobs <- input$mettypobs
   spmapobs <- input$spmapobs
-  sprct <- sprct()
   
   req(!is.null(metsel))
-      
-  if(mettypobs == 'Flow'){
-    
-    # filter spp, metric, occurrence as factor
-    out <- obsbioflo %>%
-      filter(spp %in% spmapobs) %>% 
-      filter(met %in% metsel) %>% 
-      mutate(
-        occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present'))
-      )
-    
-  } 
-      
-  if(mettypobs == 'Temperature'){
-    
-    req(metsel %in% names(biotmpmet))
-
-    # filter metrics
-    out <- biotmpmet %>% 
-      mutate(
-        occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present'))
-      ) %>% 
-      dplyr::select(name, COMID, year, occurrence, !!metsel) %>% 
-      filter(name %in% spmapobs) %>% 
-      filter(COMID %in% rchdat$COMID) 
-    
-  }
     
   # minor format for output
-  out <- out %>% 
+  out <- obsbiomet %>% 
+    filter(mettypobs %in% !!mettypobs) %>%
+    filter(spp %in% spmapobs) %>% 
+    filter(met %in% metsel) %>% 
     mutate(
+      occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present')),
       occurrbin = case_when(
         occurrence %in% 'absent' ~ 0, 
         occurrence %in% 'present' ~ 1
       )
-    ) #%>% 
-    # rename(val = !!metsel)
+    ) 
   
   return(out)
   

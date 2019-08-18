@@ -99,9 +99,11 @@ file.copy('../flowmetrics/data/bioflowmetest.RData', 'data/')
 # baseline flow metrics, all COMIDs
 file.copy('../flowmetrics/data/bsflowmetest.RData', 'data/')
 
-# Flow metrics with observed bio presence/absence -------------------------
+# Flow and temperature metrics with observed bio presence/absence -------------------------
 
 # original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
+
+## flow 
 
 #read in dataframe that has list of COMIDS in unaltered clusters, remove the unaltered COMID's that also happen to be gages
 clusters<- st_read("../../Jenny/RB4/StreamCat/COMID clustering.shp") %>% 
@@ -217,7 +219,7 @@ dat <- dat[complete.cases(dat),] %>%
   filter(!name %in% 'southwestern pond turtle') %>% 
   bind_rows(turtle)
 
-obsbioflo <- dat %>% 
+bioflomet <- dat %>% 
   rename(
     spp = name
   ) %>% 
@@ -229,11 +231,50 @@ obsbioflo <- dat %>%
       spp %in% 'rainbow trout' ~ 'trout',
       spp %in% 'santa ana sucker' ~ 'sucker',
       spp %in% 'southwestern pond turtle' ~ 'turtle'
-    )
+    ),
+    mettypobs = 'Flow'
   ) %>% 
-  gather('met', 'val', -spp, -COMID, -year, -month, -occurrence)
+  dplyr::select(-month) %>% 
+  gather('met', 'val', -spp, -COMID, -year, -occurrence, -mettypobs)
 
-save(obsbioflo, file = here('data', 'obsbioflo.RData'), compress = 'xz')
+## temperature
+fls <- list.files('raw', pattern = '\\_mdl\\.rda$', full.names = T)
+
+biotmpmet <- fls %>% 
+  enframe('ind', 'value') %>% 
+  mutate(dat = purrr::map(value, function(x){
+    
+    # load 
+    load(file = x)
+    nm <- basename(x) %>% gsub('\\.rda', '', .)
+    obj <- get(nm) %>% .$data
+    
+    return(obj)
+    
+  })
+  ) %>% 
+  unnest %>% 
+  select(-ind, -value) %>% 
+  rename(
+    spp = name
+  ) %>% 
+  mutate(
+    spp = case_when(
+      spp %in% 'arroyo chub' ~ 'chub',
+      spp %in% 'arroyo toad' ~ 'toad',
+      spp %in% "least bell's vireo" ~ 'vireo',
+      spp %in% 'rainbow trout' ~ 'trout',
+      spp %in% 'santa ana sucker' ~ 'sucker',
+      spp %in% 'southwestern pond turtle' ~ 'turtle'
+    ),
+    mettypobs = 'Temperature'
+  ) %>% 
+  gather('met', 'val', -spp, -COMID, -year, -occurrence, -mettypobs)
+
+obsbiomet <- bioflomet %>% 
+  bind_rows(biotmpmet)
+
+save(obsbiomet, file = 'data/obsbiomet.RData', compress = 'xz')
 
 # RF models for flow metrics, GLMs for temp metrics -----------------------
 
@@ -287,28 +328,6 @@ metmods <- list(
 )
 
 save(metmods, file = 'data/metmods.RData', compress = 'xz')
-
-# Extract model fitting data for temp GLMs --------------------------------
-
-fls <- list.files('raw', pattern = '\\_mdl\\.rda$', full.names = T)
-  
-biotmpmet <- fls %>% 
-  enframe('ind', 'value') %>% 
-  mutate(dat = purrr::map(value, function(x){
-      
-      # load 
-      load(file = x)
-      nm <- basename(x) %>% gsub('\\.rda', '', .)
-      obj <- get(nm) %>% .$data
-      
-      return(obj)
-      
-    })
-  ) %>% 
-  unnest %>% 
-  select(-ind, -value)
-
-save(biotmpmet, file = 'data/biotmpmet.RData', compress = 'xz')
 
 
 # baseline temperature estimates for each COMID ---------------------------
