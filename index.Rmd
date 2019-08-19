@@ -42,92 +42,22 @@ pal <- colorNumeric(
 spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
 ```
 
-### Overview
-
-This website is an interactive tool to demonstrate riparian and stream community responses to changes in hydrology in the Los Angeles and Ventura County watersheds, California, USA.  Biological response was modelled as a function of baseline and projected changes in temperature and flow using historical data and expected flow changes from down-scaled climate change models. This website is provided to enhance understanding of climate change effects on riparian dependent species to facilitate management of watershed, riparian, and in-stream habitats. 
-
-#### Objectives and approach 
-
-The objective of this website is to present the project results in a way that is meaningful to the interests of the advisory committee and others that can benefit from this project.  The website is designed to address the following questions:
-
-* What historical biological or baseline flow data are relevant for regulatory or management communities to understand current conditions? 
-
-* What changes in biological communities and flow are relevant for regulatory or management decisions in the region?
-
-* What sources of uncertainty are of most concern to inform decision-making processes?
-
-The website is structured following an analysis workflow that describes the biology, modelled hydrology, and biological response to flow changes. Data can viewed using different selection widgets and downloaded in tabular or graphical format. __The tabs at the top of the website link to separate components of the analysis.__
-
-1) __Observed biology__: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys
-
-1) __Baseline conditions__: View results for baseline conditions and modelled species results for stream reaches in the study region
-
-1) __Future scenarios__: View results for future scenarios and modelled species results for stream reaches in the study region
-
-#### Attribution
-
-All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with assistance from [Jenny Taylor](mailto:jennyt@sccwrp.org), [Abel Santana](mailto:abels@sccwrp.org), and [Eric Stein](mailto:erics@sccwrp.org). View the web page source content [here](https://github.com/SCCWRP/flowecology).
-
-
-### Observed biology {.tabset}
-
-```{r}
-column(width = 12,
-
-  column(width = 4, 
-        
-        # select species to show
-        selectInput("spmapobs", "Choose species:", choices = spls)
-          
-  ), 
-  
-  column(width = 4,
-        
-        # select metric type
-        selectInput("mettypobs", "Select predictor type:", choices = c('Flow', 'Temperature'))
-  
-  ),
-  
-  column(width = 4, 
-        
-        renderUI({
-          
-          # input
-          mettypobs <- input$mettypobs
-          spmapobs <- input$spmapobs
-
-          # pull metrics to select based on input
-          tosel <- obsbiomet %>%
-            filter(mettypobs %in% !!mettypobs) %>% 
-            filter(spp %in% spmapobs) %>% 
-            pull(met) %>% 
-            unique
-        
-          selectInput("metsel", "Select meric:", choices = tosel)
-          
-        })
-        
-  )
-       
-)
-```
-
-```{r}
+```{r reactives}
 # species selection
 sprct <- reactive({
   
   # input
-  spmapobs <- input$spmapobs
+  spsel <- input$spsel
   
   out <- biodat %>% 
-    filter(spp %in% spmapobs) 
+    filter(spp %in% spsel) 
   
   return(out)
   
 })
 
 # map of species data
-spmapobs <- reactive({
+spmap <- reactive({
   
   # input
   sprct <- sprct()
@@ -152,12 +82,12 @@ spmtdat <- reactive({
   # input
   metsel <- input$metsel
   mettypobs <- input$mettypobs
-  spmapobs <- input$spmapobs
+  spsel <- input$spsel
     
   # minor format for output
   out <- obsbiomet %>% 
     filter(mettypobs %in% !!mettypobs) %>%
-    filter(spp %in% spmapobs) %>% 
+    filter(spp %in% spsel) %>% 
     filter(met %in% metsel) %>% 
     mutate(
       occurrence = factor(occurrence, levels = c('0', '1'), labels = c('absent', 'present')),
@@ -218,16 +148,174 @@ spmtmod <- reactive({
   return(mod)
   
 })
+
+# probability of occurrence predictions for species and baseline condition
+bsprds <- reactive({
+
+  # input
+  spsel <- input$spsel
+  bsmettyp <- input$bsmettyp
+  bstyp <- input$bstyp
+  
+  # filter baseline predictions
+  out <- bsest %>% 
+    filter(spp %in% spsel) %>% 
+    filter(dts %in% bstyp) %>% 
+    filter(bsmettyp %in% !!bsmettyp)
+  
+  return(out)
+
+})
+
+# map of predictions by comid
+bsprdsmap <- reactive({
+
+  # input
+  bsprds <- bsprds()
+
+  tomapbs <- rchdat %>%
+    left_join(bsprds, by = 'COMID')
+
+  mapview(tomapbs, layer.name = NULL) %>%
+    .@map   %>% 
+    clearMarkers() %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(prd),
+      label = ~as.character(round(prd, 2))
+      ) %>% 
+    addLegend(data = tomapbs, "topright", pal = pal, values = ~prd,
+              title = "Pr. occurence", opacity = 1
+    )
+
+})
+
+# future predictions for selection
+futprds <- reactive({
+  
+  # input
+  spsel <- input$spsel
+  clmmod <- input$clmmod
+  futyr <- input$futyr
+  futmettyp <- input$futmettyp
+
+  # filter predictions by selection
+  out <- futest %>% 
+    filter(spp %in% spsel) %>% 
+    filter(mds %in% clmmod) %>% 
+    filter(futyr %in% futyr) %>% 
+    filter(mettyp %in% futmettyp)
+  
+  return(out)
+  
+})
+
+# map of predictions by comid 
+futprdsmap <- reactive({
+  
+  # input
+  futprds <- futprds()
+
+  tomap <- allrchdat %>% 
+    inner_join(futprds, by = 'COMID')
+
+  mapview(tomap, layer.name = NULL) %>% 
+    .@map %>% 
+    clearMarkers() %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(prd),
+      label = ~as.character(round(prd, 2))
+      ) %>%
+    addLegend(data = tomap, "topright", pal = pal, values = ~prd,
+              title = "Pr. occurence", opacity = 1
+    )
+
+})
+```
+
+```{r}
+column(12, 
+
+  column(3, 
+    
+    # select species to show
+    selectInput("spsel", "Choose species:", choices = spls)
+    
+  )
+)
+```
+
+### Overview
+
+This website is an interactive tool to demonstrate riparian and stream community responses to changes in hydrology in the Los Angeles and Ventura County watersheds, California, USA.  Biological response was modelled as a function of baseline and projected changes in temperature and flow using historical data and expected flow changes from down-scaled climate change models. This website is provided to enhance understanding of climate change effects on riparian dependent species to facilitate management of watershed, riparian, and in-stream habitats. 
+
+#### Objectives and approach 
+
+The objective of this website is to present the project results in a way that is meaningful to the interests of the advisory committee and others that can benefit from this project.  The website is designed to address the following questions:
+
+* What historical biological or baseline flow data are relevant for regulatory or management communities to understand current conditions? 
+
+* What changes in biological communities and flow are relevant for regulatory or management decisions in the region?
+
+* What sources of uncertainty are of most concern to inform decision-making processes?
+
+The website is structured following an analysis workflow that describes the biology, modelled hydrology, and biological response to flow changes. Data can viewed using different selection widgets and downloaded in tabular or graphical format. __The tabs at the top of the website link to separate components of the analysis.__
+
+1) __Observed biology__: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys
+
+1) __Baseline conditions__: View results for baseline conditions and modelled species results for stream reaches in the study region
+
+1) __Future scenarios__: View results for future scenarios and modelled species results for stream reaches in the study region
+
+#### Attribution
+
+All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with assistance from [Jenny Taylor](mailto:jennyt@sccwrp.org), [Abel Santana](mailto:abels@sccwrp.org), and [Eric Stein](mailto:erics@sccwrp.org). View the web page source content [here](https://github.com/SCCWRP/flowecology).
+
+### Observed biology {.tabset}
+
+```{r}
+column(width = 12,
+
+  column(width = 4,
+        
+        # select metric type
+        selectInput("mettypobs", "Select predictor type:", choices = c('Flow', 'Temperature'))
+  
+  ),
+  
+  column(width = 4, 
+        
+        renderUI({
+          
+          # input
+          mettypobs <- input$mettypobs
+          spsel <- input$spsel
+
+          # pull metrics to select based on input
+          tosel <- obsbiomet %>%
+            filter(mettypobs %in% !!mettypobs) %>% 
+            filter(spp %in% spsel) %>% 
+            pull(met) %>% 
+            unique
+        
+          selectInput("metsel", "Select meric:", choices = tosel)
+          
+        })
+        
+  )
+       
+)
 ```
 
 #### Observed data
 
 ```{r}
 # mapview
-output$spmapobs <- renderLeaflet({spmapobs()@map})
+output$spmap <- renderLeaflet({spmap()@map})
 ```
 ```{r}
-leafletOutput('spmapobs', height = 700) %>% withSpinner()
+leafletOutput('spmap', height = 700) %>% withSpinner()
 ```
 
 #### Modelled response
@@ -275,13 +363,6 @@ column(width = 12,
 
     column(width = 4,
 
-          # select species to show
-          selectInput("spmapbs", "Choose species:", choices = spls)
-
-    ),
-
-    column(width = 4,
-
           # select prediction type
           selectInput("bsmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'Synthesis')
 
@@ -298,49 +379,6 @@ column(width = 12,
 ```
 
 ```{r}
-# probability of occurrence predictions for species and baseline condition
-bsprds <- reactive({
-
-  # input
-  spmapbs <- input$spmapbs
-  bsmettyp <- input$bsmettyp
-  bstyp <- input$bstyp
-  
-  # filter baseline predictions
-  out <- bsest %>% 
-    filter(spp %in% spmapbs) %>% 
-    filter(dts %in% bstyp) %>% 
-    filter(bsmettyp %in% !!bsmettyp)
-  
-  return(out)
-
-})
-
-# map of predictions by comid
-bsprdsmap <- reactive({
-
-  # input
-  bsprds <- bsprds()
-
-  tomapbs <- rchdat %>%
-    left_join(bsprds, by = 'COMID')
-
-  mapview(tomapbs, layer.name = NULL) %>%
-    .@map   %>% 
-    clearMarkers() %>%
-    clearShapes() %>%
-    clearControls() %>%
-    addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(prd),
-      label = ~as.character(round(prd, 2))
-      ) %>% 
-    addLegend(data = tomapbs, "topright", pal = pal, values = ~prd,
-              title = "Pr. occurence", opacity = 1
-    )
-
-})
-```
-
-```{r}
 output$bsprdsmap <- renderLeaflet({bsprdsmap()})
 ```
 ```{r}
@@ -351,13 +389,6 @@ leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
 
 ```{r}
 column(width = 12,
-
-       column(width = 3, 
-              
-              # select species to show
-              selectInput("spmap", "Choose species:", choices = spls)
-                
-        ), 
        
        column(width = 3,
               
@@ -382,52 +413,6 @@ column(width = 12,
        
       
 )
-```
-
-```{r}
-# future predictions for selection
-futprds <- reactive({
-  
-  # input
-  spmap <- input$spmap
-  clmmod <- input$clmmod
-  futyr <- input$futyr
-  futmettyp <- input$futmettyp
-
-  # filter predictions by selection
-  out <- futest %>% 
-    filter(spp %in% spmap) %>% 
-    filter(mds %in% clmmod) %>% 
-    filter(futyr %in% futyr) %>% 
-    filter(mettyp %in% futmettyp)
-  
-  return(out)
-  
-})
-
-
-# map of predictions by comid 
-futprdsmap <- reactive({
-  
-  # input
-  futprds <- futprds()
-
-  tomap <- allrchdat %>% 
-    inner_join(futprds, by = 'COMID')
-
-  mapview(tomap, layer.name = NULL) %>% 
-    .@map %>% 
-    clearMarkers() %>%
-    clearShapes() %>%
-    clearControls() %>%
-    addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(prd),
-      label = ~as.character(round(prd, 2))
-      ) %>%
-    addLegend(data = tomap, "topright", pal = pal, values = ~prd,
-              title = "Pr. occurence", opacity = 1
-    )
-
-})
 ```
 
 ```{r}
