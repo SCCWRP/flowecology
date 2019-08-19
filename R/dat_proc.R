@@ -43,7 +43,7 @@ biodat <- biodat %>%
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
-# Reach shapefile ---------------------------------------------------------
+# reach shapefile ---------------------------------------------------------
 
 # ##
 # # evalue file size and plot times for difference tolerance values
@@ -84,14 +84,38 @@ save(biodat, file = 'data/biodat.RData', compress = 'xz')
 # plot(size ~ tols, toeval, type = 'l')
 # plot(plttm ~ tols, toeval, type = 'l')
 
+# waterhsed data to join
+wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
+  st_transform(prj) %>% 
+  dplyr::select(shed = NAME)
+
 rchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcus/data_and_scripts/Flowline.shp') %>% 
   st_transform(prjutm) %>% 
   st_simplify(dTolerance = 220, preserveTopology = T) %>%
-  st_transform(prj)
+  st_transform(prj) %>% 
+  st_intersection(wshed)
 
 save(rchdat, file = 'data/rchdat.RData', compress = 'xz')
 
-# Flow and temperature metrics with observed bio presence/absence -------------------------
+# all reaches, filtered by locations for future predictions ---------------
+
+
+# waterhsed data to join
+wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
+  st_transform(prj) %>% 
+  dplyr::select(shed = NAME)
+
+allrchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/NHDFlowline_Clip_NAD1983_UTMzone11.shp') %>% 
+  st_zm() %>% 
+  filter(FTYPE %in% 'StreamRiver') %>% 
+  select(COMID) %>% 
+  st_simplify(dTolerance = 220, preserveTopology = T) %>%
+  st_transform(prj) %>% 
+  st_intersection(wshed)
+
+save(allrchdat, file = 'data/allrchdat.RData', compress = 'xz')
+
+# flow and temperature metrics with observed bio presence/absence -------------------------
 
 # original from JT script L:\Flow ecology and climate change_ES\Jenny\RB4\FlowModel\BiologicalFlowModel.R
 
@@ -230,6 +254,7 @@ bioflomet <- dat %>%
   gather('met', 'val', -spp, -COMID, -year, -occurrence, -mettypobs)
 
 ## temperature
+
 fls <- list.files('raw', pattern = '\\_mdl\\.rda$', full.names = T)
 
 biotmpmet <- fls %>% 
@@ -662,15 +687,3 @@ futest <- future_predictions %>%
   )
 
 save(futest, file = 'data/futest.RData', compress = 'xz')
-
-# All reaches, filtered by locations for future predictions ---------------
-
-allrchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/NHDFlowline_Clip_NAD1983_UTMzone11.shp') %>% 
-  st_zm() %>% 
-  filter(FTYPE %in% 'StreamRiver') %>% 
-  select(COMID) %>% 
-  st_simplify(dTolerance = 220, preserveTopology = T) %>%
-  st_transform(prj)
-
-
-save(allrchdat, file = 'data/allrchdat.RData', compress = 'xz')

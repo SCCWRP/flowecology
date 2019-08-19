@@ -199,7 +199,7 @@ spmtplt <- reactive({
   
 })
 
-# regression mod for spmtplt
+# regression mod for spmtplt and stargazer
 spmtmod <- reactive({
   
   # inputs
