@@ -20,7 +20,6 @@ library(mapview)
 library(shiny)
 library(leaflet)
 library(stargazer)
-library(randomForest)
 library(shinycssloaders)
 
 source('R/funcs.R')
@@ -154,8 +153,6 @@ spmtdat <- reactive({
   metsel <- input$metsel
   mettypobs <- input$mettypobs
   spmapobs <- input$spmapobs
-  
-  req(metsel)
     
   # minor format for output
   out <- obsbiomet %>% 
@@ -169,6 +166,8 @@ spmtdat <- reactive({
         occurrence %in% 'present' ~ 1
       )
     ) 
+  
+  req(nrow(out) > 0)
   
   return(out)
   
@@ -205,8 +204,16 @@ spmtmod <- reactive({
   
   # inputs
   spmtdat <- spmtdat()
+  metsel <- input$metsel
   
-  mod <- glm(occurrbin ~ val, spmtdat, family = 'binomial')
+  # rename val to metric name for stargazer
+  tomod <- spmtdat
+  names(tomod)[names(tomod) %in% 'val'] <- metsel
+  
+  # make model
+  mod <- paste('occurrbin', '~', metsel) %>% 
+    as.formula %>% 
+    glm(., tomod, family = 'binomial')
   
   return(mod)
   
@@ -251,14 +258,9 @@ column(12,
             
             # input
             spmtmod <- spmtmod()
-            metsel <- input$metsel
-            
-            req(metsel)
-            
-            cvars <- c(metsel, 'intercept')
-            
+
             spmtmod %>%
-              stargazer(., type = 'html', dep.var.labels = 'presence/absence', covariate.labels = c('metric', 'intercept')) %>% 
+              stargazer(., type = 'html', dep.var.labels = 'presence/absence') %>% 
               HTML
             
           })
