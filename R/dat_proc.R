@@ -43,6 +43,16 @@ biodat <- biodat %>%
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
 
+# watershed polygon -------------------------------------------------------
+
+wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
+  st_transform(prjutm) %>% 
+  st_simplify(dTolerance = 100, preserveTopology = T) %>%
+  st_transform(prj) %>% 
+  dplyr::select(shed = NAME)
+
+save(wshed, file = here("data", "wshed.RData"), compress = 'xz')
+
 # reach shapefile ---------------------------------------------------------
 
 # ##
@@ -85,9 +95,7 @@ save(biodat, file = 'data/biodat.RData', compress = 'xz')
 # plot(plttm ~ tols, toeval, type = 'l')
 
 # waterhsed data to join
-wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
-  st_transform(prj) %>% 
-  dplyr::select(shed = NAME)
+data(wshed)
 
 rchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcus/data_and_scripts/Flowline.shp') %>% 
   st_transform(prjutm) %>% 
@@ -99,11 +107,8 @@ save(rchdat, file = 'data/rchdat.RData', compress = 'xz')
 
 # all reaches, filtered by locations for future predictions ---------------
 
-
 # waterhsed data to join
-wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
-  st_transform(prj) %>% 
-  dplyr::select(shed = NAME)
+data(wshed)
 
 allrchdat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/NHDFlowline_Clip_NAD1983_UTMzone11.shp') %>% 
   st_zm() %>% 

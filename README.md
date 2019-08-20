@@ -15,3 +15,5 @@ Website [here](https://sccwrp.shinyapps.io/flowecology/)
 * `futest.RData` Future species prob occurrence predictions, all species, models, 2040, 2100, min probability from temperature and flow metric predictions
 
 * `rchdat.RData` NHD flow reaches for RB4 region, subset by unaltered locations
+
+* `wshed.RData` Watershed polygon sf object

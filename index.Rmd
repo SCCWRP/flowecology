@@ -21,6 +21,7 @@ library(shiny)
 library(leaflet)
 library(stargazer)
 library(shinycssloaders)
+library(shinyWidgets)
 
 source('R/funcs.R')
 
@@ -30,6 +31,7 @@ data(allrchdat)
 data(obsbiomet)
 data(futest)
 data(bsest)
+data(wshed)
 
 # color palette function for prob map
 pal <- colorNumeric(
@@ -40,6 +42,14 @@ pal <- colorNumeric(
 
 # species choices
 spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
+
+# watershed choices
+sheds <- allrchdat %>% 
+  pull(shed) %>% 
+  levels
+
+# map types
+mptyps <- c("CartoDB.Positron", "CartoDB.DarkMatter", "OpenStreetMap", "Esri.WorldImagery", "OpenTopoMap")
 ```
 
 ```{r reactives}
@@ -48,9 +58,51 @@ sprct <- reactive({
   
   # input
   spsel <- input$spsel
+  wshedsel <- wshedsel()
   
   out <- biodat %>% 
-    filter(spp %in% spsel) 
+    filter(spp %in% spsel) %>% 
+    .[wshedsel, ]
+  
+  return(out)
+  
+})
+
+# watershed selection
+wshedsel <- reactive({
+  
+  # input
+  sheds <- input$sheds
+  
+  out <- wshed %>% 
+    filter(shed %in% sheds)
+  
+  return(out)
+  
+})
+
+# reaches filtered by wshed
+rchdatsel <- reactive({
+  
+  # inputs
+  sheds <- input$sheds
+  
+  out <- rchdat %>% 
+    filter(shed %in% sheds)
+  
+  return(out)
+  
+})
+
+
+# all reaches filtered by wshed
+allrchdatsel <- reactive({
+  
+  # inputs
+  sheds <- input$sheds
+  
+  out <- allrchdat %>% 
+    filter(shed %in% sheds)
   
   return(out)
   
@@ -61,6 +113,8 @@ spmap <- reactive({
   
   # input
   sprct <- sprct()
+  rchdatsel <- rchdatsel()
+  wshedsel <- wshedsel()
   
   # get pt size
   occex <- sprct$occex
@@ -69,7 +123,8 @@ spmap <- reactive({
   cols <- c('tomato1', 'lightgreen')
   names(cols) <- c('absent', 'present')
   
-  out <- mapview(rchdat, homebutton = F, color = 'black', legend = F, lwd = 0.5, alpha = 0.5, layer = 'Reaches') + 
+  out <- mapview(wshedsel, homebutton = F, legend = F, color = 'black', col.regions = 'white', alpha = 0.6, map.types = mptyps) + 
+    mapview(rchdatsel, homebutton = F, color = 'black', legend = F, lwd = 0.5, alpha = 0.5, layer = 'Reaches') + 
     mapview(sprct, zcol = 'occurrence', legend = T, col.regions = cols, cex = occex, homebutton = F, layer = 'Occurrence')
 
   return(out)
@@ -172,8 +227,10 @@ bsprdsmap <- reactive({
 
   # input
   bsprds <- bsprds()
+  rchdatsel <- rchdatsel()
+  wshedsel <- wshedsel()
 
-  tomapbs <- rchdat %>%
+  tomapbs <- rchdatsel %>%
     left_join(bsprds, by = 'COMID')
 
   mapview(tomapbs, layer.name = NULL) %>%
@@ -181,6 +238,9 @@ bsprdsmap <- reactive({
     clearMarkers() %>%
     clearShapes() %>%
     clearControls() %>%
+    addPolygons(data = wshedsel(), opacity = 1, weight = 1, color = 'black', 
+      fillOpacity = 0.6, fillColor = 'white', label = ~as.character(shed)
+      ) %>% 
     addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(prd),
       label = ~as.character(round(prd, 2))
       ) %>% 
@@ -215,8 +275,10 @@ futprdsmap <- reactive({
   
   # input
   futprds <- futprds()
+  allrchdatsel <- allrchdatsel()
+  wshedsel <- wshedsel()
 
-  tomap <- allrchdat %>% 
+  tomap <- allrchdatsel %>% 
     inner_join(futprds, by = 'COMID')
 
   mapview(tomap, layer.name = NULL) %>% 
@@ -224,6 +286,9 @@ futprdsmap <- reactive({
     clearMarkers() %>%
     clearShapes() %>%
     clearControls() %>%
+    addPolygons(data = wshedsel(), opacity = 1, weight = 1, color = 'black', 
+      fillOpacity = 0.6, fillColor = 'white', label = ~as.character(shed)
+      ) %>% 
     addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(prd),
       label = ~as.character(round(prd, 2))
       ) %>%
@@ -235,15 +300,23 @@ futprdsmap <- reactive({
 ```
 
 ```{r}
-column(12, 
+column(12,
 
-  column(3, 
-    
+  column(3,
+ 
     # select species to show
     selectInput("spsel", "Choose species:", choices = spls)
     
+  ),
+  
+  column(3,
+    
+    # select watershed
+    pickerInput("sheds", label = 'Select watershed(s):', choices = sheds,
+        options = list(`actions-box` = TRUE, size = 20), selected = sheds, multiple = TRUE)
+    
   )
-)
+)    
 ```
 
 ### Overview
