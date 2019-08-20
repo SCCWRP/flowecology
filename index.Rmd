@@ -263,19 +263,33 @@ bsprdsdst <- reactive({
   
   # inputs
   bsprds <- bsprds()
+
+  # data to plot, plus median by group and all
+  toplo <- bsprds %>%
+    st_set_geometry(NULL) %>% 
+    group_by(shed) %>% 
+    mutate(
+      medv = median(prd, na.rm = T)
+      ) %>% 
+    ungroup %>% 
+    mutate(
+      medvall = median(prd, na.rm = T)
+      )
   
   # by watersheds
-  p1 <- ggplot(bsprds, aes(x = shed, y = prd, fill = prd)) + 
+  p1 <- ggplot(toplo, aes(x = shed, y = prd, fill = medv)) + 
     geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
     labs(y = "Pr. occurrence") +
     scale_y_continuous(limits = c(0, 1)) +
+    scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
     pdstthm
   
   # all 
-  p2 <- ggplot(bsprds, aes(x = 'All selected', y = prd, fill = prd)) + 
+  p2 <- ggplot(toplo, aes(x = 'All selected', y = prd, fill = medvall)) + 
     geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
     labs(y = NULL) +
     scale_y_continuous(limits = c(0, 1)) +
+    scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
     pdstthm
     
   p1 + p2 + plot_layout(ncol = 2, widths = c(0.8, 0.2))
@@ -337,18 +351,32 @@ futprdsdst <- reactive({
   # inputs
   futprds <- futprds()
 
+  # data to plot, plus median by group and all
+  toplo <- futprds %>%
+    st_set_geometry(NULL) %>% 
+    group_by(shed) %>% 
+    mutate(
+      medv = median(prd, na.rm = T)
+      ) %>% 
+    ungroup %>% 
+    mutate(
+      medvall = median(prd, na.rm = T)
+      )
+  
   # by watersheds
-  p1 <- ggplot(futprds, aes(x = shed, y = prd, fill = prd)) + 
+  p1 <- ggplot(toplo, aes(x = shed, y = prd, fill = medv)) + 
     geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
     labs(y = "Pr. occurrence") +
     scale_y_continuous(limits = c(0, 1)) +
+    scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
     pdstthm
   
   # all 
-  p2 <- ggplot(futprds, aes(x = 'All selected', y = prd, fill = prd)) + 
+  p2 <- ggplot(toplo, aes(x = 'All selected', y = prd, fill = medvall)) + 
     geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
     labs(y = NULL) +
     scale_y_continuous(limits = c(0, 1)) +
+    scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
     pdstthm
     
   p1 + p2 + plot_layout(ncol = 2, widths = c(0.8, 0.2))
@@ -405,6 +433,18 @@ All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with 
 
 ### Observed biology {.tabset}
 
+#### Observed data
+
+```{r}
+# mapview
+output$spmap <- renderLeaflet({spmap()@map})
+```
+```{r}
+leafletOutput('spmap', height = 700) %>% withSpinner()
+```
+
+#### Modelled response
+
 ```{r}
 column(width = 12,
 
@@ -438,18 +478,6 @@ column(width = 12,
        
 )
 ```
-
-#### Observed data
-
-```{r}
-# mapview
-output$spmap <- renderLeaflet({spmap()@map})
-```
-```{r}
-leafletOutput('spmap', height = 700) %>% withSpinner()
-```
-
-#### Modelled response
 
 ```{r}
 output$spmtplt <- renderPlot({spmtplt()}, width = 500, height = 500)
