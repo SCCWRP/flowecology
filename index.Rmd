@@ -515,7 +515,7 @@ column(12,
 )
 ```
 
-### Baseline conditions
+### Baseline conditions {.tabset}
 
 ```{r}
 column(width = 12,
@@ -536,17 +536,24 @@ column(width = 12,
 
 )
 ```
-
 ```{r}
 output$bsprdsmap <- renderLeaflet({bsprdsmap()})
 output$bsprdsdst <- renderPlot({bsprdsdst()})
 ```
+
+#### Map
+
 ```{r}
 leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
-plotOutput('bsprdsdst', height = 400) %>% withSpinner()
 ```
 
-### Future scenarios
+#### Distribution summary
+
+```{r}
+plotOutput('bsprdsdst', height = 400)
+```
+
+### Future scenarios {.tabset}
 
 ```{r}
 column(width = 12,
@@ -575,12 +582,19 @@ column(width = 12,
       
 )
 ```
-
 ```{r}
 output$futprdsmap <- renderLeaflet({futprdsmap()})
 output$futprdsdst <- renderPlot({futprdsdst()})
 ```
+
+#### Map
+
 ```{r}
 leafletOutput('futprdsmap', height = 700) %>% withSpinner()
-plotOutput('futprdsdst', height = 400) %>% withSpinner()
+```
+
+#### Distribution summary
+
+```{r}
+plotOutput('futprdsdst', height = 400)
 ```
