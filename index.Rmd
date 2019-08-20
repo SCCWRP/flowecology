@@ -22,6 +22,7 @@ library(leaflet)
 library(stargazer)
 library(shinycssloaders)
 library(shinyWidgets)
+library(patchwork)
 
 source('R/funcs.R')
 
@@ -50,6 +51,13 @@ sheds <- allrchdat %>%
 
 # map types
 mptyps <- c("CartoDB.Positron", "CartoDB.DarkMatter", "OpenStreetMap", "Esri.WorldImagery", "OpenTopoMap")
+
+# ggplot theme for dist plots
+pdstthm <- theme_bw(base_family = 'serif', base_size = 16) + 
+  theme(
+    axis.title.x = element_blank(), 
+    axis.text.x = element_text(hjust = 1, angle = 20)
+  )
 ```
 
 ```{r reactives}
@@ -93,7 +101,6 @@ rchdatsel <- reactive({
   return(out)
   
 })
-
 
 # all reaches filtered by wshed
 allrchdatsel <- reactive({
@@ -171,7 +178,7 @@ spmtplt <- reactive({
     geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
     scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen'), drop = FALSE) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), fullrange = T) +
-    theme_bw(base_family = 'serif', base_size = 16) +
+    theme_bw(base_family = 'serif', base_size = 20) +
     theme(
       legend.title = element_blank(),
       strip.background = element_blank(),
@@ -211,12 +218,17 @@ bsprds <- reactive({
   spsel <- input$spsel
   bsmettyp <- input$bsmettyp
   bstyp <- input$bstyp
+  rchdatsel <- rchdatsel()
   
   # filter baseline predictions
   out <- bsest %>% 
     filter(spp %in% spsel) %>% 
     filter(dts %in% bstyp) %>% 
     filter(bsmettyp %in% !!bsmettyp)
+  
+  # join with rchdatsel for filter
+  out <- rchdatsel %>% 
+    left_join(out, by = 'COMID')
   
   return(out)
 
@@ -227,13 +239,9 @@ bsprdsmap <- reactive({
 
   # input
   bsprds <- bsprds()
-  rchdatsel <- rchdatsel()
   wshedsel <- wshedsel()
 
-  tomapbs <- rchdatsel %>%
-    left_join(bsprds, by = 'COMID')
-
-  mapview(tomapbs, layer.name = NULL) %>%
+  mapview(bsprds, layer.name = NULL) %>%
     .@map   %>% 
     clearMarkers() %>%
     clearShapes() %>%
@@ -241,13 +249,37 @@ bsprdsmap <- reactive({
     addPolygons(data = wshedsel(), opacity = 1, weight = 1, color = 'black', 
       fillOpacity = 0.6, fillColor = 'white', label = ~as.character(shed)
       ) %>% 
-    addPolylines(data = tomapbs, opacity = 1, weight = 1, color = ~pal(prd),
+    addPolylines(data = bsprds, opacity = 1, weight = 1, color = ~pal(prd),
       label = ~as.character(round(prd, 2))
       ) %>% 
-    addLegend(data = tomapbs, "topright", pal = pal, values = ~prd,
+    addLegend(data = bsprds, "topright", pal = pal, values = ~prd,
               title = "Pr. occurence", opacity = 1
     )
 
+})
+
+# plot of baseline prediction distributions
+bsprdsdst <- reactive({
+  
+  # inputs
+  bsprds <- bsprds()
+  
+  # by watersheds
+  p1 <- ggplot(bsprds, aes(x = shed, y = prd, fill = prd)) + 
+    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+    labs(y = "Pr. occurrence") +
+    scale_y_continuous(limits = c(0, 1)) +
+    pdstthm
+  
+  # all 
+  p2 <- ggplot(bsprds, aes(x = 'All selected', y = prd, fill = prd)) + 
+    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+    labs(y = NULL) +
+    scale_y_continuous(limits = c(0, 1)) +
+    pdstthm
+    
+  p1 + p2 + plot_layout(ncol = 2, widths = c(0.8, 0.2))
+  
 })
 
 # future predictions for selection
@@ -258,6 +290,7 @@ futprds <- reactive({
   clmmod <- input$clmmod
   futyr <- input$futyr
   futmettyp <- input$futmettyp
+  allrchdatsel <- allrchdatsel()
 
   # filter predictions by selection
   out <- futest %>% 
@@ -265,6 +298,10 @@ futprds <- reactive({
     filter(mds %in% clmmod) %>% 
     filter(futyr %in% futyr) %>% 
     filter(mettyp %in% futmettyp)
+  
+  # join with allrchdatsel for filter
+  out <- allrchdatsel %>% 
+    inner_join(out, by = 'COMID')
   
   return(out)
   
@@ -275,13 +312,9 @@ futprdsmap <- reactive({
   
   # input
   futprds <- futprds()
-  allrchdatsel <- allrchdatsel()
   wshedsel <- wshedsel()
 
-  tomap <- allrchdatsel %>% 
-    inner_join(futprds, by = 'COMID')
-
-  mapview(tomap, layer.name = NULL) %>% 
+  mapview(futprds, layer.name = NULL) %>% 
     .@map %>% 
     clearMarkers() %>%
     clearShapes() %>%
@@ -289,27 +322,52 @@ futprdsmap <- reactive({
     addPolygons(data = wshedsel(), opacity = 1, weight = 1, color = 'black', 
       fillOpacity = 0.6, fillColor = 'white', label = ~as.character(shed)
       ) %>% 
-    addPolylines(data = tomap, opacity = 1, weight = 1, color = ~pal(prd),
+    addPolylines(data = futprds, opacity = 1, weight = 1, color = ~pal(prd),
       label = ~as.character(round(prd, 2))
       ) %>%
-    addLegend(data = tomap, "topright", pal = pal, values = ~prd,
+    addLegend(data = futprds, "topright", pal = pal, values = ~prd,
               title = "Pr. occurence", opacity = 1
     )
 
 })
+
+# plot of fture prediction distributions
+futprdsdst <- reactive({
+  
+  # inputs
+  futprds <- futprds()
+
+  # by watersheds
+  p1 <- ggplot(futprds, aes(x = shed, y = prd, fill = prd)) + 
+    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+    labs(y = "Pr. occurrence") +
+    scale_y_continuous(limits = c(0, 1)) +
+    pdstthm
+  
+  # all 
+  p2 <- ggplot(futprds, aes(x = 'All selected', y = prd, fill = prd)) + 
+    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+    labs(y = NULL) +
+    scale_y_continuous(limits = c(0, 1)) +
+    pdstthm
+    
+  p1 + p2 + plot_layout(ncol = 2, widths = c(0.8, 0.2))
+  
+})
+
 ```
 
 ```{r}
 column(12,
 
-  column(3,
+  column(4,
  
     # select species to show
     selectInput("spsel", "Choose species:", choices = spls)
     
   ),
   
-  column(3,
+  column(4,
     
     # select watershed
     pickerInput("sheds", label = 'Select watershed(s):', choices = sheds,
@@ -453,9 +511,11 @@ column(width = 12,
 
 ```{r}
 output$bsprdsmap <- renderLeaflet({bsprdsmap()})
+output$bsprdsdst <- renderPlot({bsprdsdst()})
 ```
 ```{r}
 leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
+plotOutput('bsprdsdst', height = 400) %>% withSpinner()
 ```
 
 ### Future scenarios
@@ -463,21 +523,21 @@ leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
 ```{r}
 column(width = 12,
        
-       column(width = 3,
+       column(width = 4,
               
               # select metric type
               selectInput("clmmod", "Select climate model", choices = list('CanESM2' = 'CanESM2', 'CCSM4' = 'CCSM4', 'MIROC5' = 'MIROC5'))
        
         ),
        
-       column(width = 3, 
+       column(width = 4, 
               
               # select model year  
               selectInput("futyr", 'Select future year:', choices = c("2040" = '2040', "2100" = '2100'))
               
         ),
        
-       column(width = 3, 
+       column(width = 4, 
               
               # select prediction type year  
               selectInput("futmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'syn')
@@ -490,7 +550,9 @@ column(width = 12,
 
 ```{r}
 output$futprdsmap <- renderLeaflet({futprdsmap()})
+output$futprdsdst <- renderPlot({futprdsdst()})
 ```
 ```{r}
 leafletOutput('futprdsmap', height = 700) %>% withSpinner()
+plotOutput('futprdsdst', height = 400) %>% withSpinner()
 ```
