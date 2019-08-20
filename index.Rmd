@@ -276,23 +276,54 @@ bsprdsdst <- reactive({
       medvall = median(prd, na.rm = T)
       )
   
-  # by watersheds
-  p1 <- ggplot(toplo, aes(x = shed, y = prd, fill = medv)) + 
-    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+  # all 
+  p1 <- ggplot(toplo, aes(x = 'All selected', y = prd, fill = medvall)) + 
+    geom_violin(alpha = 0.8, colour = 'lightgrey') + 
+    geom_boxplot(width = 0.1, fill = 'white', alpha = 0.1, outlier.shape = NA) + 
     labs(y = "Pr. occurrence") +
     scale_y_continuous(limits = c(0, 1)) +
     scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
-    pdstthm
+    pdstthm  
   
-  # all 
-  p2 <- ggplot(toplo, aes(x = 'All selected', y = prd, fill = medvall)) + 
-    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+  # by watersheds
+  p2 <- ggplot(toplo, aes(x = shed, y = prd, fill = medv)) + 
+    geom_violin(alpha = 0.8, colour = 'lightgrey') + 
+    geom_boxplot(width = 0.1, fill = 'white', alpha = 0.1, outlier.shape = NA) + 
     labs(y = NULL) +
     scale_y_continuous(limits = c(0, 1)) +
     scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
     pdstthm
     
-  p1 + p2 + plot_layout(ncol = 2, widths = c(0.8, 0.2))
+  p1 + p2 + plot_layout(ncol = 2, widths = c(0.2, 0.8))
+  
+})
+
+# table data for baseline prediction distributions
+bsprdstab <- reactive({
+  
+  # inputs
+  bsprds <- bsprds()
+  
+  bsprds <- bsprds %>% 
+    st_set_geometry(NULL)
+  
+  # all data summarized
+  totaball <- bsprds %>%
+    select(prd) %>% 
+    summarise_all(funs(mean, median, min, max), na.rm = T) %>% 
+    mutate(Watershed = 'All selected') %>% 
+    select(Watershed, everything())
+  
+  # by shed
+  totab <- bsprds %>%
+    select(shed, prd) %>% 
+    group_by(shed) %>% 
+    summarise_all(funs(mean, median, min, max), na.rm = T) %>% 
+    mutate(shed = as.character(shed)) %>% 
+    rename(Watershed = shed) %>% 
+    bind_rows(totaball, .) 
+  
+  return(totab)
   
 })
 
@@ -363,26 +394,56 @@ futprdsdst <- reactive({
       medvall = median(prd, na.rm = T)
       )
   
-  # by watersheds
-  p1 <- ggplot(toplo, aes(x = shed, y = prd, fill = medv)) + 
-    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+  # all 
+  p1 <- ggplot(toplo, aes(x = 'All selected', y = prd, fill = medvall)) + 
+    geom_violin(alpha = 0.8, colour = 'lightgrey') + 
+    geom_boxplot(width = 0.1, fill = 'white', alpha = 0.1, outlier.shape = NA) + 
     labs(y = "Pr. occurrence") +
     scale_y_continuous(limits = c(0, 1)) +
     scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
-    pdstthm
+    pdstthm  
   
-  # all 
-  p2 <- ggplot(toplo, aes(x = 'All selected', y = prd, fill = medvall)) + 
-    geom_violin(draw_quantiles = 0.5, alpha = 0.8) + 
+  # by watersheds
+  p2 <- ggplot(toplo, aes(x = shed, y = prd, fill = medv)) + 
+    geom_violin(alpha = 0.8, colour = 'lightgrey') + 
+    geom_boxplot(width = 0.1, fill = 'white', alpha = 0.1, outlier.shape = NA) + 
     labs(y = NULL) +
     scale_y_continuous(limits = c(0, 1)) +
     scale_fill_gradientn(colours = pal(seq(0, 1, length = 11)), limits = c(0, 1), guide = F) +
     pdstthm
     
-  p1 + p2 + plot_layout(ncol = 2, widths = c(0.8, 0.2))
+  p1 + p2 + plot_layout(ncol = 2, widths = c(0.2, 0.8))
   
 })
 
+# table data for future prediction distributions
+futprdstab <- reactive({
+  
+  # inputs
+  futprds <- futprds()
+  
+  futprds <- futprds %>% 
+    st_set_geometry(NULL)
+  
+  # all data summarized
+  totaball <- futprds %>%
+    select(prd) %>% 
+    summarise_all(funs(mean, median, min, max), na.rm = T) %>% 
+    mutate(Watershed = 'All selected') %>% 
+    select(Watershed, everything())
+  
+  # by shed
+  totab <- futprds %>%
+    select(shed, prd) %>% 
+    group_by(shed) %>% 
+    summarise_all(funs(mean, median, min, max), na.rm = T) %>% 
+    mutate(shed = as.character(shed)) %>% 
+    rename(Watershed = shed) %>% 
+    bind_rows(totaball, .) 
+  
+  return(totab)
+  
+})
 ```
 
 ```{r}
@@ -523,7 +584,7 @@ column(width = 12,
     column(width = 4,
 
           # select prediction type
-          selectInput("bsmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'Synthesis')
+          selectInput("bsmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'syn')
 
     ),
 
@@ -539,6 +600,7 @@ column(width = 12,
 ```{r}
 output$bsprdsmap <- renderLeaflet({bsprdsmap()})
 output$bsprdsdst <- renderPlot({bsprdsdst()})
+output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
 ```
 
 #### Map
@@ -550,7 +612,8 @@ leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
 #### Distribution summary
 
 ```{r}
-plotOutput('bsprdsdst', height = 400)
+plotOutput('bsprdsdst')
+tableOutput('bsprdstab')
 ```
 
 ### Future scenarios {.tabset}
@@ -585,6 +648,7 @@ column(width = 12,
 ```{r}
 output$futprdsmap <- renderLeaflet({futprdsmap()})
 output$futprdsdst <- renderPlot({futprdsdst()})
+output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 ```
 
 #### Map
@@ -596,5 +660,6 @@ leafletOutput('futprdsmap', height = 700) %>% withSpinner()
 #### Distribution summary
 
 ```{r}
-plotOutput('futprdsdst', height = 400)
+plotOutput('futprdsdst')
+tableOutput('futprdstab')
 ```
