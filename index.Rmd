@@ -26,6 +26,13 @@ library(patchwork)
 
 source('R/funcs.R')
 
+# rmd downloads
+downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...)  {
+  tags$a(id = outputId, class = paste("btn btn-default shiny-download-link", 
+                                      class), href = "", target = "_blank", download = NA, 
+         icon("download"), label, ...)
+}
+
 data(biodat)
 data(rchdat)
 data(allrchdat)
@@ -446,7 +453,79 @@ futprdstab <- reactive({
 })
 ```
 
-```{r}
+```{r downloadhandlers}
+# map for observed species
+output$dlspmap <- downloadHandler(
+  filename = function(){'spmap.png'},
+  content = function(file){
+    mapshot(x = spmap(), file = file)
+  }
+)
+
+# plot for baseline prediction distributions
+output$dlspmtplt <- downloadHandler(
+  filename = function(){'spmtplt.png'},
+  content = function(file){
+    png(file, width = 7, height = 7, family = 'serif', units = 'in', res = 250)
+    print(spmtplt())
+    dev.off()
+  }
+)
+
+# map for baseline predictions
+output$bsprdsmap <- downloadHandler(
+  filename = function(){'bsprdsmap.png'},
+  content = function(file){
+    mapshot(x = bsprdsmap(), file = file)
+  }
+)
+
+# plot for baseline prediction distributions
+output$dlbsprdsdst <- downloadHandler(
+  filename = function(){'bsprdsdst.png'},
+  content = function(file){
+    png(file, width = 10, height = 5, family = 'serif', units = 'in', res = 250)
+    print(bsprdsdst())
+    dev.off()
+  }
+)
+
+# table data for baseline prediction distributions
+output$dlbsprdstab <- downloadHandler(
+  filename = function(){'bsprdstab.csv'},
+  content = function(file){
+    write.csv(bsprdstab(), file, quote = T, row.names = F)
+  }
+)
+
+# map for future predictions
+output$futprdsmap <- downloadHandler(
+  filename = function(){'futprdsmap.png'},
+  content = function(file){
+    mapshot(x = futprdsmap(), file = file)
+  }
+)
+
+# plot for future prediction distributions
+output$dlfutprdsdst <- downloadHandler(
+  filename = function(){'futprdsdst.png'},
+  content = function(file){
+    png(file, width = 10, height = 5, family = 'serif', units = 'in', res = 250)
+    print(futprdsdst())
+    dev.off()
+  }
+)
+
+# table data for future prediction distributions
+output$dlfutprdstab <- downloadHandler(
+  filename = function(){'futprdstab.csv'},
+  content = function(file){
+    write.csv(futprdstab(), file, quote = T, row.names = F)
+  }
+)
+```
+
+```{r topsels}
 column(12,
 
   column(4,
@@ -494,14 +573,18 @@ All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with 
 
 ### Observed biology {.tabset}
 
-#### Observed data
+#### Map
 
 ```{r}
 # mapview
 output$spmap <- renderLeaflet({spmap()@map})
 ```
 ```{r}
-leafletOutput('spmap', height = 700) %>% withSpinner()
+column(12, downloadButtonRmd('dlspmap', 'Download map'))
+HTML('<br>')
+column(12, 
+  leafletOutput('spmap', height = 700) %>% withSpinner()
+)
 ```
 
 #### Modelled response
@@ -542,36 +625,27 @@ column(width = 12,
 
 ```{r}
 output$spmtplt <- renderPlot({spmtplt()}, width = 500, height = 500)
+output$spmtmodtab <- renderUI({
+      
+  # input
+  spmtmod <- spmtmod()
+  
+  spmtmod %>%
+    stargazer(., type = 'html', dep.var.labels = 'presence/absence') %>% 
+    HTML
+  
+})
 ```
 ```{r}
 column(12,
   column(width = 6, 
-         plotOutput('spmtplt')
+    plotOutput('spmtplt') %>% withSpinner()
   ), 
   column(width = 6,
-          HTML('<br>'), 
-          # renderText({
-          #   
-          #   spmtmod <- spmtmod()
-          #   
-          #   dat <- spmtmod %>% 
-          #     summary %>% 
-          #     coef %>% 
-          #     .[2, 4] %>% 
-          #     paste('p =', .)
-          #   return(dat)
-          #   
-          # }),
-          renderUI({
-            
-            # input
-            spmtmod <- spmtmod()
-
-            spmtmod %>%
-              stargazer(., type = 'html', dep.var.labels = 'presence/absence') %>% 
-              HTML
-            
-          })
+    HTML('<br>'),
+    uiOutput('spmtmodtab') %>% withSpinner(),
+    HTML('<br><br>'), 
+    downloadButtonRmd('dlspmtplt', 'Download figure')
   )
 )
 ```
@@ -606,14 +680,20 @@ output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
 #### Map
 
 ```{r}
-leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
+column(12, downloadButtonRmd('dlbsprdsmap', 'Download map'))
+HTML('<br>')
+column(12, 
+  leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
+)
 ```
 
 #### Distribution summary
 
 ```{r}
-plotOutput('bsprdsdst')
-tableOutput('bsprdstab')
+column(12, downloadButtonRmd('dlbsprdsdst', 'Download figure'))
+column(12, plotOutput('bsprdsdst') %>% withSpinner())
+column(12, downloadButtonRmd('dlbsprdstab', 'Download table'))
+column(12, tableOutput('bsprdstab') %>% withSpinner())
 ```
 
 ### Future scenarios {.tabset}
@@ -654,12 +734,18 @@ output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 #### Map
 
 ```{r}
-leafletOutput('futprdsmap', height = 700) %>% withSpinner()
+column(12, downloadButtonRmd('dlfutprdsmap', 'Download map'))
+HTML('<br>')
+column(12, 
+  leafletOutput('futprdsmap', height = 700) %>% withSpinner()
+)
 ```
 
 #### Distribution summary
 
 ```{r}
-plotOutput('futprdsdst')
-tableOutput('futprdstab')
+column(12, downloadButtonRmd('dlfutprdsdst', 'Download figure'))
+column(12, plotOutput('futprdsdst') %>% withSpinner())
+column(12, downloadButtonRmd('dlfutprdstab', 'Download table'))
+column(12, tableOutput('futprdstab') %>% withSpinner())
 ```
