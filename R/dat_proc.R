@@ -11,11 +11,22 @@ library(here)
 prj <- '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs'
 prjutm <- utm_wgs84(11)
 
+# watershed polygon -------------------------------------------------------
+
+wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
+  st_transform(prjutm) %>% 
+  st_simplify(dTolerance = 100, preserveTopology = T) %>%
+  st_transform(prj) %>% 
+  dplyr::select(shed = NAME)
+
+save(wshed, file = here("data", "wshed.RData"), compress = 'xz')
+
 # biology data ------------------------------------------------------------
 
+data(wshed)
+
 # biological data linked to nhd
-biodat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcus/data_and_scripts/species_occurrence_unique_NHDFlowline_JOIN_NAD83.shp')
-biodat <- biodat %>% 
+biodat <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Marcus/data_and_scripts/species_occurrence_unique_NHDFlowline_JOIN_NAD83.shp') %>% 
   dplyr::select(FID_1, date, name, occurrence, COMID) %>% 
   mutate(
     date = as.character(date),
@@ -39,19 +50,11 @@ biodat <- biodat %>%
             name %in% 'southwestern pond turtle' ~ 'turtle'
         )) %>% 
   rename(spp = name) %>% 
-  st_transform(prj)
+  st_transform(prj) %>% 
+  st_intersection(wshed) %>% 
+  mutate(shed = as.character(shed))
 
 save(biodat, file = 'data/biodat.RData', compress = 'xz')
-
-# watershed polygon -------------------------------------------------------
-
-wshed <- st_read('//172.16.1.5/Biology/Flow ecology and climate change_ES/Jenny/RB4/WorkingData_3-16-18/RB4WatershedBoundaty.shp') %>% 
-  st_transform(prjutm) %>% 
-  st_simplify(dTolerance = 100, preserveTopology = T) %>%
-  st_transform(prj) %>% 
-  dplyr::select(shed = NAME)
-
-save(wshed, file = here("data", "wshed.RData"), compress = 'xz')
 
 # reach shapefile ---------------------------------------------------------
 

@@ -73,11 +73,11 @@ sprct <- reactive({
   
   # input
   spsel <- input$spsel
-  wshedsel <- wshedsel()
+  sheds <- input$sheds
   
   out <- biodat %>% 
     filter(spp %in% spsel) %>% 
-    .[wshedsel, ]
+    filter(shed %in% sheds)
   
   return(out)
   
@@ -348,7 +348,7 @@ futprds <- reactive({
   out <- futest %>% 
     filter(spp %in% spsel) %>% 
     filter(mds %in% clmmod) %>% 
-    filter(futyr %in% futyr) %>% 
+    filter(dts %in% futyr) %>% 
     filter(mettyp %in% futmettyp)
   
   # join with allrchdatsel for filter
@@ -462,6 +462,20 @@ output$dlspmap <- downloadHandler(
   }
 )
 
+# data for observed species
+output$dlspdat <- downloadHandler(
+  filename = function(){'spdat.csv'},
+  content = function(file){
+    # format for ambiguity
+    todl <- sprct() %>% 
+      st_set_geometry(NULL) %>% 
+      group_by(spp, yr, shed, occurrence) %>% 
+      summarise(count = n()) %>% 
+      arrange(shed, yr, occurrence)
+    write.csv(todl, file, quote = T, row.names = F)
+  }
+)
+
 # plot for baseline prediction distributions
 output$dlspmtplt <- downloadHandler(
   filename = function(){'spmtplt.png'},
@@ -477,6 +491,15 @@ output$dlbsprdsmap <- downloadHandler(
   filename = function(){'bsprdsmap.png'},
   content = function(file){
     mapshot(x = bsprdsmap(), file = file)
+  }
+)
+
+# map data for baseline predictions
+output$dlbsprdsdat <- downloadHandler(
+  filename = function(){'bsprdsdat.csv'},
+  content = function(file){
+    todl <- bsprds() %>% st_set_geometry(NULL)
+    write.csv(todl, file, quote = T, row.names = F)
   }
 )
 
@@ -503,6 +526,15 @@ output$dlfutprdsmap <- downloadHandler(
   filename = function(){'futprdsmap.png'},
   content = function(file){
     mapshot(x = futprdsmap(), file = file)
+  }
+)
+
+# map data for future predictions
+output$dlfutprdsdat <- downloadHandler(
+  filename = function(){'futprdsdat.csv'},
+  content = function(file){
+    todl <- futprds() %>% st_set_geometry(NULL)
+    write.csv(todl, file, quote = T, row.names = F)
   }
 )
 
@@ -580,7 +612,11 @@ All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with 
 output$spmap <- renderLeaflet({spmap()@map})
 ```
 ```{r}
-column(12, downloadButtonRmd('dlspmap', 'Download map'))
+column(12, 
+  column(4, downloadButtonRmd('dlspmap', 'Download map')),
+  column(4, downloadButtonRmd('dlspdat', 'Download data'))
+)
+HTML('<br>')
 HTML('<br>')
 column(12, 
   leafletOutput('spmap', height = 700) %>% withSpinner()
@@ -680,7 +716,11 @@ output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
 #### Map
 
 ```{r}
-column(12, downloadButtonRmd('dlbsprdsmap', 'Download map'))
+column(12, 
+  column(4, downloadButtonRmd('dlbsprdsmap', 'Download map')),
+  column(4, downloadButtonRmd('dlbsprdsdat', 'Download data'))
+)
+HTML('<br>')
 HTML('<br>')
 column(12, 
   leafletOutput('bsprdsmap', height = 700) %>% withSpinner()
@@ -690,9 +730,13 @@ column(12,
 #### Distribution summary
 
 ```{r}
-column(12, downloadButtonRmd('dlbsprdsdst', 'Download figure'))
+column(12, 
+  column(4, downloadButtonRmd('dlbsprdsdst', 'Download figure'))
+)
 column(12, plotOutput('bsprdsdst') %>% withSpinner())
-column(12, downloadButtonRmd('dlbsprdstab', 'Download table'))
+column(12, 
+  column(4, downloadButtonRmd('dlbsprdstab', 'Download table'))
+)
 column(12, tableOutput('bsprdstab') %>% withSpinner())
 ```
 
@@ -734,7 +778,11 @@ output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 #### Map
 
 ```{r}
-column(12, downloadButtonRmd('dlfutprdsmap', 'Download map'))
+column(12, 
+  column(4, downloadButtonRmd('dlfutprdsmap', 'Download map')),
+  column(4, downloadButtonRmd('dlfutprdsdat', 'Download data'))
+)
+HTML('<br>')
 HTML('<br>')
 column(12, 
   leafletOutput('futprdsmap', height = 700) %>% withSpinner()
@@ -744,8 +792,12 @@ column(12,
 #### Distribution summary
 
 ```{r}
-column(12, downloadButtonRmd('dlfutprdsdst', 'Download figure'))
+column(12, 
+  column(4, downloadButtonRmd('dlfutprdsdst', 'Download figure'))
+)
 column(12, plotOutput('futprdsdst') %>% withSpinner())
-column(12, downloadButtonRmd('dlfutprdstab', 'Download table'))
+column(12, 
+  column(4, downloadButtonRmd('dlfutprdstab', 'Download table'))
+)
 column(12, tableOutput('futprdstab') %>% withSpinner())
 ```
