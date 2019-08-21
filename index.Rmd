@@ -473,7 +473,7 @@ output$dlspmtplt <- downloadHandler(
 )
 
 # map for baseline predictions
-output$bsprdsmap <- downloadHandler(
+output$dlbsprdsmap <- downloadHandler(
   filename = function(){'bsprdsmap.png'},
   content = function(file){
     mapshot(x = bsprdsmap(), file = file)
@@ -499,7 +499,7 @@ output$dlbsprdstab <- downloadHandler(
 )
 
 # map for future predictions
-output$futprdsmap <- downloadHandler(
+output$dlfutprdsmap <- downloadHandler(
   filename = function(){'futprdsmap.png'},
   content = function(file){
     mapshot(x = futprdsmap(), file = file)
