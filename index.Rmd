@@ -635,7 +635,9 @@ The website is structured following an analysis workflow that describes the biol
 
 #### Attribution
 
-All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with assistance from [Jenny Taylor](mailto:jennyt@sccwrp.org), [Abel Santana](mailto:abels@sccwrp.org), and [Eric Stein](mailto:erics@sccwrp.org). View the web page source content [here](https://github.com/SCCWRP/flowecology).
+Analysis and modeling conducted by [Jenny Taylor](mailto:jennyt@sccwrp.org), with assistance from [Eric Stein](mailto:erics@sccwrp.org) and [Marcus Beck](mailto:marcusb@sccwrp.org).  All site content by [Marcus Beck](mailto:marcusb@sccwrp.org). View the web page source content [here](https://github.com/SCCWRP/flowecology).
+
+[v1.0.0](https://github.com/SCCWRP/flowecology/releases/tag/v1.0) [![DOI](https://zenodo.org/badge/130382187.svg)](https://zenodo.org/badge/latestdoi/130382187)
 
 ### Observed biology {.tabset}
 
