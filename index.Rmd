@@ -141,6 +141,10 @@ spmap <- reactive({
   rchdatsel <- rchdatsel()
   wshedsel <- wshedsel()
   
+  validate(
+    need(nrow(wshedsel) > 0, "No selection to show - select watersheds from above")
+  )
+  
   # get pt size
   occex <- sprct$occex
   
@@ -259,6 +263,10 @@ bsprdsmap <- reactive({
   bsprds <- bsprds()
   wshedsel <- wshedsel()
 
+  validate(
+    need(nrow(bsprds) > 0, "No selection to show - select watersheds from above")
+  )
+  
   mapview(bsprds, layer.name = NULL) %>%
     .@map   %>% 
     clearMarkers() %>%
@@ -282,6 +290,10 @@ bsprdsdst <- reactive({
   # inputs
   bsprds <- bsprds()
 
+  validate(
+    need(nrow(bsprds) > 0, "No selection to show - select watersheds from above")
+  )
+  
   # data to plot, plus median by group and all
   toplo <- bsprds %>%
     st_set_geometry(NULL) %>% 
@@ -377,6 +389,10 @@ futprdsmap <- reactive({
   futprds <- futprds()
   wshedsel <- wshedsel()
 
+  validate(
+    need(nrow(futprds) > 0, "No selection to show - select watersheds from above")
+  )
+  
   mapview(futprds, layer.name = NULL) %>% 
     .@map %>% 
     clearMarkers() %>%
@@ -400,6 +416,10 @@ futprdsdst <- reactive({
   # inputs
   futprds <- futprds()
 
+  validate(
+    need(nrow(futprds) > 0, "No selection to show - select watersheds from above")
+  )
+    
   # data to plot, plus median by group and all
   toplo <- futprds %>%
     st_set_geometry(NULL) %>% 
@@ -618,7 +638,7 @@ All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with 
 
 #### Map
 
-This map shows the observed biological data from field surveys in the study.  The points show presence (green) and absence (red) for the selected species in the drop-down menu above.  A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+This map shows the observed data for `r renderText({input$spsel})` from field surveys used in the study.  The points show presence (green) and absence (red) for all survey years (`r renderText({min(sprct()$yr, na.rm = T)})` to `r renderText({max(sprct()$yr, na.rm = T)})`).  A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 # mapview
