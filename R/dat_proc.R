@@ -263,7 +263,7 @@ bioflomet <- dat %>%
 
 ## temperature
 
-fls <- list.files('raw', pattern = '\\_mdl\\.rda$', full.names = T)
+fls <- list.files('../../Jenny/AirTemp/Modeling/', pattern = '\\_mdl\\.rda$', full.names = T)
 
 biotmpmet <- fls %>% 
   enframe('ind', 'value') %>% 
