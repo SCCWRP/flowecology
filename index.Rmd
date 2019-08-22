@@ -220,6 +220,9 @@ spmtmod <- reactive({
   spmtdat <- spmtdat()
   metsel <- input$metsel
   
+  # trailing underscore for a metric breaks html stargazer
+  metsel <- gsub('\\_$', '', metsel)
+  
   # rename val to metric name for stargazer
   tomod <- spmtdat
   names(tomod)[names(tomod) %in% 'val'] <- metsel
@@ -750,7 +753,7 @@ output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
 
 #### Map
 
-This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected scenario (`r renderText({input$bsmettyp})`) under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected prediction type (`r renderText({input$bsmettyp})`) under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12, 
@@ -816,7 +819,7 @@ output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 
 #### Map
 
-This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected climate model (`r renderText({input$clmmod})`) and scenario (`r renderText({input$futmettyp})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected climate model (`r renderText({input$clmmod})`) and prediction type (`r renderText({input$futmettyp})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12, 
