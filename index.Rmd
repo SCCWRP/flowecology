@@ -7,7 +7,7 @@ output:
 runtime: shiny
 ---
 
-## Biological responses of stream communities to climate change in the LA river basin {.tabset .tabset-pills}
+## Stream community response to climate change in the LA river basin {.tabset .tabset-pills}
 
 ```{r setup, include = FALSE}
 # globals
@@ -23,6 +23,8 @@ library(stargazer)
 library(shinycssloaders)
 library(shinyWidgets)
 library(patchwork)
+
+if (is.null(suppressMessages(webshot:::find_phantom()))) { webshot::install_phantomjs() }
 
 source('R/funcs.R')
 
@@ -51,6 +53,9 @@ pal <- colorNumeric(
 # species choices
 spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
 
+# baseline condition choices
+bstypls <- list(`dry (2014)` = '2014', `moderate (2010)` = '2010', `wet (1993)` = '1993')
+
 # watershed choices
 sheds <- allrchdat %>% 
   pull(shed) %>% 
@@ -65,6 +70,12 @@ pdstthm <- theme_bw(base_family = 'serif', base_size = 16) +
     axis.title.x = element_blank(), 
     axis.text.x = element_text(hjust = 1, angle = 20)
   )
+
+# spelling::spell_check_files('index.Rmd')
+```
+
+```{r banner, width = "100%", fig.align = 'center'}
+knitr::include_graphics('banner.png')
 ```
 
 ```{r reactives}
@@ -579,7 +590,7 @@ column(12,
 
 ### Overview
 
-This website is an interactive tool to demonstrate riparian and stream community responses to changes in hydrology in the Los Angeles and Ventura County watersheds, California, USA.  Biological response was modelled as a function of baseline and projected changes in temperature and flow using historical data and expected flow changes from down-scaled climate change models. This website is provided to enhance understanding of climate change effects on riparian dependent species to facilitate management of watershed, riparian, and in-stream habitats. 
+This website is an interactive tool to demonstrate riparian and stream community responses to changes in hydrology in the Los Angeles and Ventura County watersheds, California, USA.  Biological response was modeled as a function of baseline and projected changes in temperature and flow using historical data and expected flow changes from down-scaled climate change models. This website is provided to enhance understanding of climate change effects on riparian dependent species to facilitate management of watershed, riparian, and in-stream habitats. 
 
 #### Objectives and approach 
 
@@ -591,13 +602,13 @@ The objective of this website is to present the project results in a way that is
 
 * What sources of uncertainty are of most concern to inform decision-making processes?
 
-The website is structured following an analysis workflow that describes the biology, modelled hydrology, and biological response to flow changes. Data can viewed using different selection widgets and downloaded in tabular or graphical format. __The tabs at the top of the website link to separate components of the analysis.__
+The website is structured following an analysis workflow that describes the biology, modeled biological response to current conditions, and modeled biological response to future changes. Data can viewed using different selection widgets and downloaded in tabular or graphical format. __The tabs at the top of the website link to separate components of the analysis.__
 
-1) __Observed biology__: View and download biology data for the Los Angeles and Ventura County watersheds, historical data from existing surveys
+1) __Observed biology__: View and download biology data for the region, including summarized historical data from existing surveys.  The modeled species responses to flow and temperature metrics can also be viewed.
 
-1) __Baseline conditions__: View results for baseline conditions and modelled species results for stream reaches in the study region
+1) __Baseline conditions__: View results for baseline conditions and modeled species results for stream reaches in the study region. Graphical and tabular summaries by watershed are also provided.
 
-1) __Future scenarios__: View results for future scenarios and modelled species results for stream reaches in the study region
+1) __Future scenarios__: View results for future scenarios and modeled species results for stream reaches in the study region. Graphical and tabular summaries by watershed are also provided.
 
 #### Attribution
 
@@ -606,6 +617,8 @@ All site content and analyses by [Marcus Beck](mailto:marcusb@sccwrp.org), with 
 ### Observed biology {.tabset}
 
 #### Map
+
+This map shows the observed biological data from field surveys in the study.  The points show presence (green) and absence (red) for the selected species in the drop-down menu above.  A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 # mapview
@@ -623,7 +636,9 @@ column(12,
 )
 ```
 
-#### Modelled response
+#### Modeled response
+
+The plot on the left shows the likelihood of observing `r renderText({input$spsel})` across a range of values for the `r renderText({tolower(input$mettypobs)})` metric `r renderText({input$metsel})`.  The curve in the plot shows the estimated probability for a given value of `r renderText({input$metsel})` on the-axis, with a 95% confidence interval.  The points on the top and bottom indicate species presence/absence located on the actual values for the metric at which the data were observed.  The table on the right provides a summary of the model in the plot.  The slope and intercept estimates are shown in the first two rows (with standard error in parentheses) and the overall model summary statistics are shown in the bottom three rows.  Click the button on the bottom right to download the figure. 
 
 ```{r}
 column(width = 12,
@@ -701,7 +716,7 @@ column(width = 12,
     column(width = 4,
           
           # select baseline conditions
-          selectInput('bstyp', 'Select baseline conditions:', choices = list(`dry (2014)` = '2014', `moderate (2010)` = '2010', `wet (1993)` = '1993'))
+          selectInput('bstyp', 'Select baseline conditions:', choices = bstypls)
 
     )
 
@@ -714,6 +729,8 @@ output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
 ```
 
 #### Map
+
+This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected scenario (`r renderText({input$bsmettyp})`) under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12, 
@@ -728,6 +745,8 @@ column(12,
 ```
 
 #### Distribution summary
+
+The range of predicted probabilities of occurrence from the map are summarized in the plot and table below.  The plot shows the probabilities summarized by all watersheds (left plot) and each watershed separately using [boxplots](https://en.wikipedia.org/wiki/Box_plot) overlaid on [violin plots](https://en.wikipedia.org/wiki/Violin_plot).  These plots provide an indication of where how the probability estimates are distributed in each watershed.  The table provides similar information.  Click on the buttons to download the plot or table. 
 
 ```{r}
 column(12, 
@@ -777,6 +796,8 @@ output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 
 #### Map
 
+This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected climate model (`r renderText({input$clmmod})`) and scenario (`r renderText({input$futmettyp})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+
 ```{r}
 column(12, 
   column(4, downloadButtonRmd('dlfutprdsmap', 'Download map')),
@@ -790,6 +811,8 @@ column(12,
 ```
 
 #### Distribution summary
+
+The range of predicted probabilities of occurrence from the map are summarized in the plot and table below.  The plot shows the probabilities summarized by all watersheds (left plot) and each watershed separately using [boxplots](https://en.wikipedia.org/wiki/Box_plot) overlaid on [violin plots](https://en.wikipedia.org/wiki/Violin_plot).  These plots provide an indication of where how the probability estimates are distributed in each watershed.  The table provides similar information.  Click on the buttons to download the plot or table. 
 
 ```{r}
 column(12, 
