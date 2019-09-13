@@ -690,7 +690,7 @@ column(width = 12,
             pull(met) %>% 
             unique
         
-          selectInput("metsel", "Select meric:", choices = tosel)
+          selectInput("metsel", "Select metric:", choices = tosel)
           
         })
         
