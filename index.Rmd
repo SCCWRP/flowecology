@@ -10,10 +10,8 @@ runtime: shiny
 ## Stream community response to climate change in the LA river basin {.tabset .tabset-pills}
 
 ```{r setup, include = FALSE}
-# globals
+# libraries
 library(knitr)
-opts_chunk$set(echo = F, message = F, warning = F)
-
 library(tidyverse)
 library(sf)
 library(mapview)
@@ -23,10 +21,14 @@ library(stargazer)
 library(shinycssloaders)
 library(shinyWidgets)
 library(patchwork)
+library(readr)
+library(kableExtra)
 
+# chunk defaults
+opts_chunk$set(echo = F, message = F, warning = F)
+
+# for shinyapps map webshot to work
 if (is.null(suppressMessages(webshot:::find_phantom()))) { webshot::install_phantomjs() }
-
-source('R/funcs.R')
 
 # rmd downloads
 downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...)  {
@@ -35,6 +37,7 @@ downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...) 
          icon("download"), label, ...)
 }
 
+# rdata 
 data(biodat)
 data(rchdat)
 data(allrchdat)
@@ -42,6 +45,29 @@ data(obsbiomet)
 data(futest)
 data(bsest)
 data(wshed)
+
+# species table for notes
+spp_tab <- read_csv('data/spp_tab.csv') %>% 
+  mutate(
+    `Scientific name` = paste0('*', `Scientific name`, '*')
+  )
+
+# flow metric table for notes
+flo_tab <- read_csv('data/flo_tab.csv') %>% 
+  mutate(
+    `Definition [units]` = gsub('ft3', 'ft$^3$', `Definition [units]`)
+  )
+
+# temperature metric table for notes
+tmp_tab <- read_csv('data/tmp_tab.csv') %>% 
+  mutate(
+    Definition = gsub('C', '$^\\\\circ$C', Definition),
+    Metric = gsub('C', '$^\\\\circ$C', Metric), 
+    `Temperature Pattern` = ifelse(is.na(`Temperature Pattern`), '', `Temperature Pattern`)
+  ) %>% 
+  rename(
+    `Definition [units]` = Definition
+  )
 
 # color palette function for prob map
 pal <- colorNumeric(
@@ -51,7 +77,7 @@ pal <- colorNumeric(
 )
 
 # species choices
-spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
+spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'steelhead trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
 
 # baseline condition choices
 bstypls <- list(`dry (2014)` = '2014', `moderate (2010)` = '2010', `wet (1993)` = '1993')
@@ -615,6 +641,8 @@ column(12,
 
 This website is an interactive tool to demonstrate riparian and stream community responses to changes in hydrology in the Los Angeles and Ventura County watersheds, California, USA.  Biological response was modeled as a function of baseline and projected changes in temperature and flow using historical data and expected flow changes from down-scaled climate change models. This website is provided to enhance understanding of climate change effects on riparian dependent species to facilitate management of watershed, riparian, and in-stream habitats. 
 
+Please view the [report](http://ftp.sccwrp.org/pub/download/DOCUMENTS/TechnicalReports/1084_ClimateChangeVulnerability.pdf) for technical details. 
+
 #### Objectives and approach 
 
 The objective of this website is to present the project results in a way that is meaningful to the interests of the advisory committee and others that can benefit from this project.  The website is designed to address the following questions:
@@ -848,4 +876,33 @@ column(12,
   column(4, downloadButtonRmd('dlfutprdstab', 'Download table'))
 )
 column(12, tableOutput('futprdstab') %>% withSpinner())
+```
+
+### Notes
+
+```{r}
+cap <- 'Table 1: Species selected for habitat modeling.'
+foot <- 'Conservation status codes as follows: CESA (California Endangered Species Act); FESA (Federal Endangered Species Act); FT (federally threatened); FE (federally endangered); ST (state threatened); SE (state endangered); G1 (globally critically imperiled); S1 (state critically imperiled); G2 (globally imperiled); S2 (state imperiled); G3 (globally vulnerable); S3 (state vulnerable); G4 (globally apparently secure); G5 (globally secure); T1Q (subspecies critically imperiled); T2 (subspecies imperiled). For more information on the conservation statue refer to (https://www.wildlife.ca.gov/Data/CNDDB/Plants-and-Animals) and for more information on NatureServe listing status see [Faber-Langendoen et al. (2012)](https://www.natureserve.org/sites/default/files/publications/files/natureserveconservationstatusmethodology_jun12_0.pdf).'
+knitr::kable(spp_tab, caption = cap) %>% 
+  kable_styling(font_size = 12) %>% 
+  add_header_above(c(" " = 4, "Conservation status" = 2)) %>% 
+  column_spec(1, width = "4cm") %>% 
+  column_spec(4, width = "5cm") %>% 
+  footnote(general = foot)
+```
+
+```{r}
+cap <- 'Table 2: Stream flow metric names and descriptions.  The metric selectors in this app include the time frame as a prefix (i.e., all, x3, x5, x10) followed by the metric name.'
+foot <- 'Script used for metric calculation and definition came from [Konrad, Brasher, & May (2008)](https://doi.org/10.1111/j.1365-2427.2008.02024.x). The range shows the 3-year timeframe for the baseline flow data used in this project with the units given in the definition column – these values are meant to give someone an idea of what is reasonable. Values outside of these ranges are likely in other regions or time periods for most metrics (except, for example, the probability-based metrics like hydroperiod). Timeframe refers to the numbers of years of flow data used in the calculation, measured back in time, from date of species occurrence.'
+knitr::kable(flo_tab, caption = cap) %>% 
+  kable_styling(font_size = 12) %>% 
+  footnote(symbol = foot, symbol_manual = '*')
+```
+
+```{r}
+cap <- 'Table 3: Stream temperature metric definitions.'
+foot <- 'Months included in calculating these metrics are May through September, which are the warm months and thus the time when water temperatures can be a concern.'
+knitr::kable(tmp_tab, caption = cap) %>% 
+  kable_styling(font_size = 12) %>% 
+  footnote(general = foot)
 ```

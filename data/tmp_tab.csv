@@ -1,0 +1,7 @@
+Temperature Pattern,Metric ,Definition
+Magnitude,Minimum 7-day minimum,[C] The minimum value of a rolling 7-day minimum
+,Maximum 7-day maximum,[C] The maximum value of a rolling 7-day maximum
+,Maximum 7-day average,[C] The maximum value of a rolling 7-day average
+Variability,Maximum 7-day range,[C] The maximum difference between the rolling 7-day maximum and minimum. I.e. the largest temperature swing within a 7-day period.
+,Mean 7-day range,[C] The average difference between the rolling 7-day maximum and minimum. I.e. the average temperature swing within a 7-day period.
+Frequency,Number of 7-day maximums > 30C,[days] The number of 7-day rolling averages that are greater than 30C
