@@ -671,7 +671,7 @@ Analysis and modeling conducted by [Jenny Taylor](mailto:jennyt@sccwrp.org), wit
 
 #### Map
 
-This map shows the observed data for `r renderText({input$spsel})` from field surveys used in the study.  The points show presence (green) and absence (red) for all survey years (`r renderText({min(sprct()$yr, na.rm = T)})` to `r renderText({max(sprct()$yr, na.rm = T)})`).  A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+This map shows the observed data for `r renderText({input$spsel})` from field surveys used in the study.  The points show presence (green) and absence (red) for all survey years (`r renderText({min(sprct()$yr, na.rm = T)})` to `r renderText({max(sprct()$yr, na.rm = T)})`).  A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below.  Note that the downloaded data are aggregated by watershed, please contact [Jenny Taylor](mailto:jennyt@sccwrp.org) for obtaining more detailed data or see the [report](http://ftp.sccwrp.org/pub/download/DOCUMENTS/TechnicalReports/1084_ClimateChangeVulnerability.pdf) for data sources.
 
 ```{r}
 # mapview
