@@ -695,3 +695,20 @@ futest <- future_predictions %>%
   )
 
 save(futest, file = 'data/futest.RData', compress = 'xz')
+
+# baseline flow metric predictions ----------------------------------------
+
+load('../flowmetrics/data/bsflowmetest.RData')
+
+bsflowmetest <- bsflowmetest %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+    ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+save(bsflowmetest, file = 'data/bsflowmetest.RData', compress = 'xz')

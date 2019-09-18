@@ -45,6 +45,7 @@ data(obsbiomet)
 data(futest)
 data(bsest)
 data(wshed)
+data(bsflowmetest)
 
 # species table for notes
 spp_tab <- read_csv('data/spp_tab.csv') %>% 
@@ -82,6 +83,9 @@ spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo
 # baseline condition choices
 bstypls <- list(`dry (2014)` = '2014', `moderate (2010)` = '2010', `wet (1993)` = '1993')
 
+# metric types for selection
+mettypls <- list("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn')
+
 # watershed choices
 sheds <- allrchdat %>% 
   pull(shed) %>% 
@@ -105,6 +109,35 @@ knitr::include_graphics('banner.png')
 ```
 
 ```{r reactives}
+# baseline color palette function for metrics
+bspalmet <- reactive({
+  
+   # inputs
+  bstyp <- input$bstyp
+  bsmettyp <- input$bsmettyp
+  bsmetsel <- input$bsmetsel
+  rchdatsel <- rchdatsel()
+  
+  req(bsmetsel)
+  req(!bsmettyp %in% c('temp', 'syn'))
+
+  if(bsmettyp == 'flow')
+    out <- bsflowmetest %>% 
+      filter(dts %in% !!bstyp) %>% 
+      filter(met %in% !!bsmetsel)
+  
+  rng <- range(out$val, na.rm = T)
+  
+  palout <- colorNumeric(
+    palette = RColorBrewer::brewer.pal(11, 'PRGn'),
+    na.color = NA,
+    domain = rng
+  )
+  
+  return(palout)
+
+})
+
 # species selection
 sprct <- reactive({
   
@@ -386,6 +419,61 @@ bsprdstab <- reactive({
   
 })
 
+# baseline metric data
+bsmetsdat <- reactive({
+  
+  # inputs
+  bstyp <- input$bstyp
+  bsmettyp <- input$bsmettyp
+  bsmetsel <- input$bsmetsel
+  rchdatsel <- rchdatsel()
+  
+  req(bsmetsel)
+  req(!bsmettyp %in% c('temp', 'syn'))
+
+  if(bsmettyp == 'flow')
+    out <- bsflowmetest %>% 
+      filter(dts %in% !!bstyp) %>% 
+      filter(met %in% !!bsmetsel)
+    
+  # join with rchdatsel for filter
+  out <- rchdatsel %>% 
+    left_join(out, by = 'COMID')
+  
+  return(out)
+  
+})
+
+# baseline metric map
+bsmetsmap <- reactive({
+  
+  # inputs
+  bsmetsdat <- bsmetsdat()
+  wshedsel <- wshedsel()
+  bsmetsel <- input$bsmetsel
+  bspalmet <- bspalmet()
+
+  validate(
+    need(nrow(bsmetsdat) > 0, "No selection to show - select watersheds from above")
+  )
+  
+  mapview(bsmetsdat, layer.name = NULL) %>%
+    .@map   %>% 
+    clearMarkers() %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolygons(data = wshedsel(), opacity = 1, weight = 1, color = 'black', 
+      fillOpacity = 0.6, fillColor = 'white', label = ~as.character(shed)
+      ) %>% 
+    addPolylines(data = bsmetsdat, opacity = 1, weight = 1, color = ~bspalmet(val),
+      label = ~as.character(round(val, 2))
+      ) %>% 
+    addLegend(data = bsmetsdat, "topright", pal = bspalmet, values = ~val,
+              title = bsmetsel, opacity = 1
+    )
+
+})
+
 # future predictions for selection
 futprds <- reactive({
   
@@ -581,6 +669,23 @@ output$dlbsprdstab <- downloadHandler(
   }
 )
 
+# map for baseline metrics
+output$dlbsmetsmap <- downloadHandler(
+  filename = function(){'bsmetsmap.png'},
+  content = function(file){
+    mapshot(x = bsmetsmap(), file = file)
+  }
+)
+
+# map data for baseline metrics
+output$dlbsmetsdat <- downloadHandler(
+  filename = function(){'bsmetsdat.csv'},
+  content = function(file){
+    todl <- bsmetsdat() %>% st_set_geometry(NULL)
+    write.csv(todl, file, quote = T, row.names = F)
+  }
+)
+
 # map for future predictions
 output$dlfutprdsmap <- downloadHandler(
   filename = function(){'futprdsmap.png'},
@@ -759,29 +864,54 @@ column(12,
 ```{r}
 column(width = 12,
 
-    column(width = 4,
+  column(width = 3,
 
-          # select prediction type
-          selectInput("bsmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'syn')
+        # select prediction type
+        selectInput("bsmettyp", 'Select prediction type:', choices = mettypls, selected = mettypls[[3]])
 
     ),
 
-    column(width = 4,
+  column(width = 3,
           
-          # select baseline conditions
-          selectInput('bstyp', 'Select baseline conditions:', choices = bstypls)
+        # select baseline conditions
+        selectInput('bstyp', 'Select baseline conditions:', choices = bstypls)
 
+  ), 
+    
+  column(width = 3, 
+          
+        # select baseline metric
+        renderUI({
+            
+          # input
+          bsmettyp <- input$bsmettyp
+            
+          req(!bsmettyp %in% c('temp', 'syn'))
+            
+          if(bsmettyp == 'flow')
+            tosel <- bsflowmetest %>% 
+              pull(met) %>% 
+              unique %>% 
+              sort
+
+            
+          selectInput("bsmetsel", "Select metric:", choices = tosel)
+            
+        })
+        
     )
-
+           
 )
 ```
+
 ```{r}
 output$bsprdsmap <- renderLeaflet({bsprdsmap()})
 output$bsprdsdst <- renderPlot({bsprdsdst()})
 output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
+output$bsmetsmap <- renderLeaflet({bsmetsmap()})
 ```
 
-#### Map
+#### Map predictions
 
 This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected prediction type (`r renderText({input$bsmettyp})`) under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
@@ -812,6 +942,22 @@ column(12,
 column(12, tableOutput('bsprdstab') %>% withSpinner())
 ```
 
+#### Map metrics
+
+This map shows the estimated values for the `r renderText({input$bsmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$bsmettyp)])})` metric under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+
+```{r}
+column(12,
+  column(4, downloadButtonRmd('dlbsmetsmap', 'Download map')),
+  column(4, downloadButtonRmd('dlbsmetsdat', 'Download data'))
+)
+HTML('<br>')
+HTML('<br>')
+column(12, 
+  leafletOutput('bsmetsmap', height = 700) %>% withSpinner()
+)
+```
+
 ### Future scenarios {.tabset}
 
 ```{r}
@@ -834,7 +980,7 @@ column(width = 12,
        column(width = 4, 
               
               # select prediction type year  
-              selectInput("futmettyp", 'Select prediction type:', choices = c("Temperature" = 'temp', "Flow" = 'flow', 'Synthesis' = 'syn'), selected = 'syn')
+              selectInput("futmettyp", 'Select prediction type:', choices = mettypls, selected = mettypls[3])
               
         )
        
@@ -847,7 +993,7 @@ output$futprdsdst <- renderPlot({futprdsdst()})
 output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 ```
 
-#### Map
+#### Map predictions
 
 This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected climate model (`r renderText({input$clmmod})`) and prediction type (`r renderText({input$futmettyp})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
@@ -877,6 +1023,8 @@ column(12,
 )
 column(12, tableOutput('futprdstab') %>% withSpinner())
 ```
+
+#### Map metrics
 
 ### Notes
 
