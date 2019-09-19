@@ -46,6 +46,12 @@ data(futest)
 data(bsest)
 data(wshed)
 data(bsflowmetest)
+data(canesm2flowmetdt1)
+data(canesm2flowmetdt2)
+data(ccsm4flowmetdt1)
+data(ccsm4flowmetdt2)
+data(miroc5flowmetdt1)
+data(miroc5flowmetdt2)
 
 # species table for notes
 spp_tab <- read_csv('data/spp_tab.csv') %>% 
@@ -112,11 +118,10 @@ knitr::include_graphics('banner.png')
 # baseline color palette function for metrics
 bspalmet <- reactive({
   
-   # inputs
+  # inputs
   bstyp <- input$bstyp
   bsmettyp <- input$bsmettyp
   bsmetsel <- input$bsmetsel
-  rchdatsel <- rchdatsel()
   
   req(bsmetsel)
   req(!bsmettyp %in% c('temp', 'syn'))
@@ -125,6 +130,47 @@ bspalmet <- reactive({
     out <- bsflowmetest %>% 
       filter(dts %in% !!bstyp) %>% 
       filter(met %in% !!bsmetsel)
+  
+  rng <- range(out$val, na.rm = T)
+  
+  palout <- colorNumeric(
+    palette = RColorBrewer::brewer.pal(11, 'PRGn'),
+    na.color = NA,
+    domain = rng
+  )
+  
+  return(palout)
+
+})
+
+# futre color palette function for metrics
+futpalmet <- reactive({
+  
+  # inputs
+  futyr <- input$futyr
+  futmettyp <- input$futmettyp
+  futmetsel <- input$futmetsel
+  clmmod <- input$clmmod
+  
+  req(futmetsel)
+  req(!futmettyp %in% c('temp', 'syn'))
+
+  # ridiculous crap
+  if(futmettyp == 'flow' & clmmod == 'CanESM2' & futyr == '2040')
+    out <- canesm2flowmetdt1
+  if(futmettyp == 'flow' & clmmod == 'CanESM2' & futyr == '2100')
+    out <- canesm2flowmetdt2
+  if(futmettyp == 'flow' & clmmod == 'CCSM4' & futyr == '2040')
+    out <- ccsm4flowmetdt1
+  if(futmettyp == 'flow' & clmmod == 'CCSM4' & futyr == '2100')
+    out <- ccsm4flowmetdt2
+  if(futmettyp == 'flow' & clmmod == 'MIROC5' & futyr == '2040')
+    out <- miroc5flowmetdt1
+  if(futmettyp == 'flow' & clmmod == 'MIROC5' & futyr == '2100')
+    out <- miroc5flowmetdt2
+  
+  out <- out %>% 
+    filter(met %in% !!futmetsel)
   
   rng <- range(out$val, na.rm = T)
   
@@ -599,6 +645,75 @@ futprdstab <- reactive({
   return(totab)
   
 })
+
+# future metric data
+futmetsdat <- reactive({
+  
+  # inputs
+  futyr <- input$futyr
+  futmettyp <- input$futmettyp
+  futmetsel <- input$futmetsel
+  clmmod <- input$clmmod
+  allrchdatsel <- allrchdatsel()
+  
+  req(futmetsel)
+  req(!futmettyp %in% c('temp', 'syn'))
+
+  # ridiculous crap
+  if(futmettyp == 'flow' & clmmod == 'CanESM2' & futyr == '2040')
+    out <- canesm2flowmetdt1
+  if(futmettyp == 'flow' & clmmod == 'CanESM2' & futyr == '2100')
+    out <- canesm2flowmetdt2
+  if(futmettyp == 'flow' & clmmod == 'CCSM4' & futyr == '2040')
+    out <- ccsm4flowmetdt1
+  if(futmettyp == 'flow' & clmmod == 'CCSM4' & futyr == '2100')
+    out <- ccsm4flowmetdt2
+  if(futmettyp == 'flow' & clmmod == 'MIROC5' & futyr == '2040')
+    out <- miroc5flowmetdt1
+  if(futmettyp == 'flow' & clmmod == 'MIROC5' & futyr == '2100')
+    out <- miroc5flowmetdt2
+  
+  # select metric
+  out <- out %>% 
+    filter(met %in% !!futmetsel)
+    
+  # join with rchdatsel for filter
+  out <- allrchdatsel %>% 
+    left_join(out, by = 'COMID')
+  
+  return(out)
+  
+})
+
+# future metric map
+futmetsmap <- reactive({
+  
+  # inputs
+  futmetsdat <- futmetsdat()
+  wshedsel <- wshedsel()
+  futmetsel <- input$futmetsel
+  futpalmet <- futpalmet()
+
+  validate(
+    need(nrow(futmetsdat) > 0, "No selection to show - select watersheds from above")
+  )
+  
+  mapview(futmetsdat, layer.name = NULL) %>%
+    .@map   %>% 
+    clearMarkers() %>%
+    clearShapes() %>%
+    clearControls() %>%
+    addPolygons(data = wshedsel(), opacity = 1, weight = 1, color = 'black', 
+      fillOpacity = 0.6, fillColor = 'white', label = ~as.character(shed)
+      ) %>% 
+    addPolylines(data = futmetsdat, opacity = 1, weight = 1, color = ~futpalmet(val),
+      label = ~as.character(round(val, 2))
+      ) %>% 
+    addLegend(data = futmetsdat, "topright", pal = futpalmet, values = ~val,
+              title = futmetsel, opacity = 1
+    )
+
+})
 ```
 
 ```{r downloadhandlers}
@@ -669,23 +784,6 @@ output$dlbsprdstab <- downloadHandler(
   }
 )
 
-# map for baseline metrics
-output$dlbsmetsmap <- downloadHandler(
-  filename = function(){'bsmetsmap.png'},
-  content = function(file){
-    mapshot(x = bsmetsmap(), file = file)
-  }
-)
-
-# map data for baseline metrics
-output$dlbsmetsdat <- downloadHandler(
-  filename = function(){'bsmetsdat.csv'},
-  content = function(file){
-    todl <- bsmetsdat() %>% st_set_geometry(NULL)
-    write.csv(todl, file, quote = T, row.names = F)
-  }
-)
-
 # map for future predictions
 output$dlfutprdsmap <- downloadHandler(
   filename = function(){'futprdsmap.png'},
@@ -720,6 +818,24 @@ output$dlfutprdstab <- downloadHandler(
     write.csv(futprdstab(), file, quote = T, row.names = F)
   }
 )
+
+# map for future metrics
+output$dlfutmetsmap <- downloadHandler(
+  filename = function(){'futmetsmap.png'},
+  content = function(file){
+    mapshot(x = futmetsmap(), file = file)
+  }
+)
+
+# map data for future metrics
+output$dlfutmetsdat <- downloadHandler(
+  filename = function(){'futmetsdat.csv'},
+  content = function(file){
+    todl <- futmetsdat() %>% st_set_geometry(NULL)
+    write.csv(todl, file, quote = T, row.names = F)
+  }
+)
+
 ```
 
 ```{r topsels}
@@ -963,27 +1079,48 @@ column(12,
 ```{r}
 column(width = 12,
        
-       column(width = 4,
+       column(width = 3,
               
               # select metric type
               selectInput("clmmod", "Select climate model", choices = list('CanESM2' = 'CanESM2', 'CCSM4' = 'CCSM4', 'MIROC5' = 'MIROC5'))
        
         ),
        
-       column(width = 4, 
+       column(width = 3, 
               
               # select model year  
               selectInput("futyr", 'Select future year:', choices = c("2040" = '2040', "2100" = '2100'))
               
         ),
        
-       column(width = 4, 
+       column(width = 3, 
               
               # select prediction type year  
               selectInput("futmettyp", 'Select prediction type:', choices = mettypls, selected = mettypls[3])
               
-        )
+        ), 
        
+       column(width = 3,
+              
+              # select future metric
+              renderUI({
+            
+                # input
+                futmettyp <- input$futmettyp
+            
+                req(!futmettyp %in% c('temp', 'syn'))
+            
+                if(futmettyp == 'flow')
+                  tosel <- canesm2flowmetdt1 %>% 
+                    pull(met) %>% 
+                    unique %>% 
+                    sort
+                
+                selectInput("futmetsel", "Select metric:", choices = tosel)
+            
+              })
+              
+        )
       
 )
 ```
@@ -991,6 +1128,7 @@ column(width = 12,
 output$futprdsmap <- renderLeaflet({futprdsmap()})
 output$futprdsdst <- renderPlot({futprdsdst()})
 output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
+output$futmetsmap <- renderLeaflet({futmetsmap()})
 ```
 
 #### Map predictions
@@ -1025,6 +1163,20 @@ column(12, tableOutput('futprdstab') %>% withSpinner())
 ```
 
 #### Map metrics
+
+This map shows the estimated values for the `r renderText({input$futmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$futmettyp)])})` metric and climate model (`r renderText({input$clmmod})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+
+```{r}
+column(12,
+  column(4, downloadButtonRmd('dlfutmetsmap', 'Download map')),
+  column(4, downloadButtonRmd('dlfutmetsdat', 'Download data'))
+)
+HTML('<br>')
+HTML('<br>')
+column(12, 
+  leafletOutput('futmetsmap', height = 700) %>% withSpinner()
+)
+```
 
 ### Notes
 

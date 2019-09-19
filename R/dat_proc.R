@@ -712,3 +712,86 @@ bsflowmetest <- bsflowmetest %>%
   )
 
 save(bsflowmetest, file = 'data/bsflowmetest.RData', compress = 'xz')
+
+# future flow meric predictions -------------------------------------------
+
+load('../flowmetrics/data/canesm2flowmetdt1.RData')
+load('../flowmetrics/data/canesm2flowmetdt2.RData')
+load('../flowmetrics/data/ccsm4flowmetdt1.RData')
+load('../flowmetrics/data/ccsm4flowmetdt2.RData')
+load('../flowmetrics/data/miroc5flowmetdt1.RData')
+load('../flowmetrics/data/miroc5flowmetdt2.RData')
+
+canesm2flowmetdt1 <- canesm2flowmetdt1 %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+  ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+canesm2flowmetdt2 <- canesm2flowmetdt2 %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+  ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+ccsm4flowmetdt1 <- ccsm4flowmetdt1 %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+  ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+ccsm4flowmetdt2 <- ccsm4flowmetdt2 %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+  ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+miroc5flowmetdt1 <- miroc5flowmetdt1 %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+  ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+miroc5flowmetdt2 <- miroc5flowmetdt2 %>% 
+  select(
+    met = var, 
+    COMID, 
+    dts = dtsl,
+    val = est
+  ) %>% 
+  mutate(
+    dts = year(dts)
+  )
+
+save(canesm2flowmetdt1, file = 'data/canesm2flowmetdt1.RData', compress = 'xz')
+save(canesm2flowmetdt2, file = 'data/canesm2flowmetdt2.RData', compress = 'xz')
+save(ccsm4flowmetdt1, file = 'data/ccsm4flowmetdt1.RData', compress = 'xz')
+save(ccsm4flowmetdt2, file = 'data/ccsm4flowmetdt2.RData', compress = 'xz')
+save(miroc5flowmetdt1, file = 'data/miroc5flowmetdt1.RData', compress = 'xz')
+save(miroc5flowmetdt2, file = 'data/miroc5flowmetdt2.RData', compress = 'xz')
+
