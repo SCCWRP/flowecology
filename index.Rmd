@@ -502,6 +502,9 @@ bsmetsmap <- reactive({
   validate(
     need(nrow(bsmetsdat) > 0, "No selection to show - select watersheds from above")
   )
+    
+  bsmetsdat <- bsmetsdat %>% 
+    filter(!is.na(val))
   
   mapview(bsmetsdat, layer.name = NULL) %>%
     .@map   %>% 
@@ -697,6 +700,9 @@ futmetsmap <- reactive({
   validate(
     need(nrow(futmetsdat) > 0, "No selection to show - select watersheds from above")
   )
+  
+  futmetsdat <- futmetsdat %>% 
+    filter(!is.na(val))
   
   mapview(futmetsdat, layer.name = NULL) %>%
     .@map   %>% 
