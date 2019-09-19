@@ -128,12 +128,19 @@ bspalmet <- reactive({
   bsmetsel <- input$bsmetsel
   
   req(bsmetsel)
-  req(!bsmettyp %in% c('temp', 'syn'))
+  req(!bsmettyp %in% 'syn')
 
   if(bsmettyp == 'flow')
-    out <- bsflowmetest %>% 
-      filter(dts %in% !!bstyp) %>% 
-      filter(met %in% !!bsmetsel)
+    out <- bsflowmetest 
+  
+  if(bsmettyp == 'temp')
+    out <- bstempmetest
+  
+  req(bsmetsel %in% out$met)
+  
+  out <- out %>%  
+    filter(dts %in% !!bstyp) %>% 
+    filter(met %in% !!bsmetsel)
   
   rng <- range(out$val, na.rm = T, finite = T)
   
@@ -490,13 +497,20 @@ bsmetsdat <- reactive({
   rchdatsel <- rchdatsel()
   
   req(bsmetsel)
-  req(!bsmettyp %in% c('temp', 'syn'))
+  req(!bsmettyp %in% 'syn')
 
   if(bsmettyp == 'flow')
-    out <- bsflowmetest %>% 
-      filter(dts %in% !!bstyp) %>% 
-      filter(met %in% !!bsmetsel) %>% 
-      filter(!is.infinite(val))
+    out <- bsflowmetest 
+  
+  if(bsmettyp == 'temp')
+    out <- bstempmetest
+  
+  req(bsmetsel %in% out$met)
+  
+  out <- out %>% 
+    filter(dts %in% !!bstyp) %>% 
+    filter(met %in% !!bsmetsel) %>% 
+    filter(!is.infinite(val))
     
   # join with rchdatsel for filter
   out <- rchdatsel %>% 
@@ -875,14 +889,14 @@ output$dlfutmetsdat <- downloadHandler(
 ```{r topsels}
 column(12,
 
-  column(4,
+  column(6,
  
     # select species to show
     selectInput("spsel", "Choose species:", choices = spls)
     
   ),
   
-  column(4,
+  column(6,
     
     # select watershed
     pickerInput("sheds", label = 'Select watershed(s):', choices = sheds,
@@ -934,8 +948,8 @@ output$spmap <- renderLeaflet({spmap()@map})
 ```
 ```{r}
 column(12, 
-  column(4, downloadButtonRmd('dlspmap', 'Download map')),
-  column(4, downloadButtonRmd('dlspdat', 'Download data'))
+  column(3, downloadButtonRmd('dlspmap', 'Download map')),
+  column(3, downloadButtonRmd('dlspdat', 'Download data'))
 )
 HTML('<br>')
 HTML('<br>')
@@ -1015,16 +1029,16 @@ column(12,
 column(width = 12,
 
   column(width = 3,
-
-        # select prediction type
-        selectInput("bsmettyp", 'Select prediction type:', choices = mettypls, selected = mettypls[[3]])
+          
+        # select baseline conditions
+        selectInput('bstyp', 'Select baseline conditions:', choices = bstypls)
 
     ),
 
   column(width = 3,
-          
-        # select baseline conditions
-        selectInput('bstyp', 'Select baseline conditions:', choices = bstypls)
+         
+        # select prediction type
+        selectInput("bsmettyp", 'Select prediction type:', choices = mettypls, selected = mettypls[[3]])
 
   ), 
     
@@ -1036,15 +1050,19 @@ column(width = 12,
           # input
           bsmettyp <- input$bsmettyp
             
-          req(!bsmettyp %in% c('temp', 'syn'))
+          req(!bsmettyp %in% 'syn')
             
           if(bsmettyp == 'flow')
-            tosel <- bsflowmetest %>% 
+            tosel <- bsflowmetest
+          
+          if(bsmettyp == 'temp')
+            tosel <- bstempmetest
+          
+          tosel <- tosel %>% 
               pull(met) %>% 
               unique %>% 
               sort
 
-            
           selectInput("bsmetsel", "Select metric:", choices = tosel)
             
         })
@@ -1061,14 +1079,14 @@ output$bsprdstab <- renderTable({bsprdstab()}, width = 900, digits = 3)
 output$bsmetsmap <- renderLeaflet({bsmetsmap()})
 ```
 
-#### Map predictions
+#### Map species distribution
 
 This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected prediction type (`r renderText({input$bsmettyp})`) under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12, 
-  column(4, downloadButtonRmd('dlbsprdsmap', 'Download map')),
-  column(4, downloadButtonRmd('dlbsprdsdat', 'Download data'))
+  column(3, downloadButtonRmd('dlbsprdsmap', 'Download map')),
+  column(3, downloadButtonRmd('dlbsprdsdat', 'Download data'))
 )
 HTML('<br>')
 HTML('<br>')
@@ -1077,29 +1095,29 @@ column(12,
 )
 ```
 
-#### Distribution summary
+#### Species distribution summary
 
 The range of predicted probabilities of occurrence from the map are summarized in the plot and table below.  The plot shows the probabilities summarized by all watersheds (left plot) and each watershed separately using [boxplots](https://en.wikipedia.org/wiki/Box_plot) overlaid on [violin plots](https://en.wikipedia.org/wiki/Violin_plot).  These plots provide an indication of where how the probability estimates are distributed in each watershed.  The table provides similar information.  Click on the buttons to download the plot or table. 
 
 ```{r}
 column(12, 
-  column(4, downloadButtonRmd('dlbsprdsdst', 'Download figure'))
+  column(3, downloadButtonRmd('dlbsprdsdst', 'Download figure'))
 )
 column(12, plotOutput('bsprdsdst') %>% withSpinner())
 column(12, 
-  column(4, downloadButtonRmd('dlbsprdstab', 'Download table'))
+  column(3, downloadButtonRmd('dlbsprdstab', 'Download table'))
 )
 column(12, tableOutput('bsprdstab') %>% withSpinner())
 ```
 
 #### Map metrics
 
-This map shows the estimated values for the `r renderText({input$bsmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$bsmettyp)])})` metric under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+Select either temperature or flow from the prediction type above to select a metric to map.  This map shows the estimated values for the `r renderText({input$bsmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$bsmettyp)])})` metric under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12,
-  column(4, downloadButtonRmd('dlbsmetsmap', 'Download map')),
-  column(4, downloadButtonRmd('dlbsmetsdat', 'Download data'))
+  column(3, downloadButtonRmd('dlbsmetsmap', 'Download map')),
+  column(3, downloadButtonRmd('dlbsmetsdat', 'Download data'))
 )
 HTML('<br>')
 HTML('<br>')
@@ -1170,14 +1188,14 @@ output$futprdstab <- renderTable({futprdstab()}, width = 900, digits = 3)
 output$futmetsmap <- renderLeaflet({futmetsmap()})
 ```
 
-#### Map predictions
+#### Map species distribution
 
 This map shows the predicted likelihood of observing `r renderText({input$spsel})` for the selected climate model (`r renderText({input$clmmod})`) and prediction type (`r renderText({input$futmettyp})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the estimated probability occurrence for the selected scenario. The color scale is the same for all selections to allow comparisons of relative changes in the estimates. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12, 
-  column(4, downloadButtonRmd('dlfutprdsmap', 'Download map')),
-  column(4, downloadButtonRmd('dlfutprdsdat', 'Download data'))
+  column(3, downloadButtonRmd('dlfutprdsmap', 'Download map')),
+  column(3, downloadButtonRmd('dlfutprdsdat', 'Download data'))
 )
 HTML('<br>')
 HTML('<br>')
@@ -1186,29 +1204,29 @@ column(12,
 )
 ```
 
-#### Distribution summary
+#### Species distribution summary
 
 The range of predicted probabilities of occurrence from the map are summarized in the plot and table below.  The plot shows the probabilities summarized by all watersheds (left plot) and each watershed separately using [boxplots](https://en.wikipedia.org/wiki/Box_plot) overlaid on [violin plots](https://en.wikipedia.org/wiki/Violin_plot).  These plots provide an indication of where how the probability estimates are distributed in each watershed.  The table provides similar information.  Click on the buttons to download the plot or table. 
 
 ```{r}
 column(12, 
-  column(4, downloadButtonRmd('dlfutprdsdst', 'Download figure'))
+  column(3, downloadButtonRmd('dlfutprdsdst', 'Download figure'))
 )
 column(12, plotOutput('futprdsdst') %>% withSpinner())
 column(12, 
-  column(4, downloadButtonRmd('dlfutprdstab', 'Download table'))
+  column(3, downloadButtonRmd('dlfutprdstab', 'Download table'))
 )
 column(12, tableOutput('futprdstab') %>% withSpinner())
 ```
 
 #### Map metrics
 
-This map shows the estimated values for the `r renderText({input$futmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$futmettyp)])})` metric and climate model (`r renderText({input$clmmod})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+Select either temperature or flow from the prediction type above to select a metric to map.  This map shows the estimated values for the `r renderText({input$futmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$futmettyp)])})` metric and climate model (`r renderText({input$clmmod})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12,
-  column(4, downloadButtonRmd('dlfutmetsmap', 'Download map')),
-  column(4, downloadButtonRmd('dlfutmetsdat', 'Download data'))
+  column(3, downloadButtonRmd('dlfutmetsmap', 'Download map')),
+  column(3, downloadButtonRmd('dlfutmetsdat', 'Download data'))
 )
 HTML('<br>')
 HTML('<br>')
