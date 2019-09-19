@@ -135,7 +135,7 @@ bspalmet <- reactive({
       filter(dts %in% !!bstyp) %>% 
       filter(met %in% !!bsmetsel)
   
-  rng <- range(out$val, na.rm = T)
+  rng <- range(out$val, na.rm = T, finite = T)
   
   palout <- colorNumeric(
     palette = RColorBrewer::brewer.pal(11, 'PRGn'),
@@ -157,8 +157,8 @@ futpalmet <- reactive({
   clmmod <- input$clmmod
   
   req(futmetsel)
-  req(!futmettyp %in% c('temp', 'syn'))
-
+  req(!futmettyp %in% 'syn')
+    
   # ridiculous crap
   if(futmettyp == 'flow' & clmmod == 'CanESM2' & futyr == '2040')
     out <- canesm2flowmetdt1
@@ -172,11 +172,22 @@ futpalmet <- reactive({
     out <- miroc5flowmetdt1
   if(futmettyp == 'flow' & clmmod == 'MIROC5' & futyr == '2100')
     out <- miroc5flowmetdt2
+  if(futmettyp == 'temp' & clmmod == 'CanESM2')
+    out <- canesm2tempmet %>% 
+      filter(dts %in% futyr)
+  if(futmettyp == 'temp' & clmmod == 'CCSM4')
+    out <- ccsm4tempmet %>% 
+      filter(dts %in% futyr)
+  if(futmettyp == 'temp' & clmmod == 'MIROC5')
+    out <- miroc5tempmet %>% 
+      filter(dts %in% futyr)
   
+  req(futmetsel %in% out$met)
+
   out <- out %>% 
     filter(met %in% !!futmetsel)
   
-  rng <- range(out$val, na.rm = T)
+  rng <- range(out$val, na.rm = T, finite = T)
   
   palout <- colorNumeric(
     palette = RColorBrewer::brewer.pal(11, 'PRGn'),
@@ -484,7 +495,8 @@ bsmetsdat <- reactive({
   if(bsmettyp == 'flow')
     out <- bsflowmetest %>% 
       filter(dts %in% !!bstyp) %>% 
-      filter(met %in% !!bsmetsel)
+      filter(met %in% !!bsmetsel) %>% 
+      filter(!is.infinite(val))
     
   # join with rchdatsel for filter
   out <- rchdatsel %>% 
@@ -664,7 +676,7 @@ futmetsdat <- reactive({
   allrchdatsel <- allrchdatsel()
   
   req(futmetsel)
-  req(!futmettyp %in% c('temp', 'syn'))
+  req(!futmettyp %in% 'syn')
 
   # ridiculous crap
   if(futmettyp == 'flow' & clmmod == 'CanESM2' & futyr == '2040')
@@ -679,10 +691,22 @@ futmetsdat <- reactive({
     out <- miroc5flowmetdt1
   if(futmettyp == 'flow' & clmmod == 'MIROC5' & futyr == '2100')
     out <- miroc5flowmetdt2
+  if(futmettyp == 'temp' & clmmod == 'CanESM2')
+    out <- canesm2tempmet %>% 
+      filter(dts %in% futyr)
+  if(futmettyp == 'temp' & clmmod == 'CCSM4')
+    out <- ccsm4tempmet %>% 
+      filter(dts %in% futyr)
+  if(futmettyp == 'temp' & clmmod == 'MIROC5')
+    out <- miroc5tempmet %>% 
+      filter(dts %in% futyr)
+  
+  req(futmetsel %in% out$met)
   
   # select metric
   out <- out %>% 
-    filter(met %in% !!futmetsel)
+    filter(met %in% !!futmetsel) %>% 
+    filter(!is.infinite(val))
     
   # join with rchdatsel for filter
   out <- allrchdatsel %>% 
@@ -1118,10 +1142,15 @@ column(width = 12,
                 # input
                 futmettyp <- input$futmettyp
             
-                req(!futmettyp %in% c('temp', 'syn'))
+                req(!futmettyp %in% 'syn')
             
                 if(futmettyp == 'flow')
-                  tosel <- canesm2flowmetdt1 %>% 
+                  tosel <- canesm2flowmetdt1
+                
+                if(futmettyp == 'temp')
+                  tosel <- canesm2tempmet
+                
+                tosel <- tosel %>% 
                     pull(met) %>% 
                     unique %>% 
                     sort
