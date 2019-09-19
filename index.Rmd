@@ -46,12 +46,16 @@ data(futest)
 data(bsest)
 data(wshed)
 data(bsflowmetest)
+data(bstempmetest)
 data(canesm2flowmetdt1)
 data(canesm2flowmetdt2)
+data(canesm2tempmet)
 data(ccsm4flowmetdt1)
 data(ccsm4flowmetdt2)
+data(ccsm4tempmet)
 data(miroc5flowmetdt1)
 data(miroc5flowmetdt2)
+data(miroc5tempmet)
 
 # species table for notes
 spp_tab <- read_csv('data/spp_tab.csv') %>% 
@@ -1206,7 +1210,7 @@ knitr::kable(flo_tab, caption = cap) %>%
 ```
 
 ```{r}
-cap <- 'Table 3: Stream temperature metric definitions.'
+cap <- 'Table 3: Stream temperature metric names and descriptions.'
 foot <- 'Months included in calculating these metrics are May through September, which are the warm months and thus the time when water temperatures can be a concern.'
 knitr::kable(tmp_tab, caption = cap) %>% 
   kable_styling(font_size = 12) %>% 

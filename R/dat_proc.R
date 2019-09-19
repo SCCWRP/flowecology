@@ -713,7 +713,7 @@ bsflowmetest <- bsflowmetest %>%
 
 save(bsflowmetest, file = 'data/bsflowmetest.RData', compress = 'xz')
 
-# future flow meric predictions -------------------------------------------
+# future flow metric predictions -------------------------------------------
 
 load('../flowmetrics/data/canesm2flowmetdt1.RData')
 load('../flowmetrics/data/canesm2flowmetdt2.RData')
@@ -795,3 +795,59 @@ save(ccsm4flowmetdt2, file = 'data/ccsm4flowmetdt2.RData', compress = 'xz')
 save(miroc5flowmetdt1, file = 'data/miroc5flowmetdt1.RData', compress = 'xz')
 save(miroc5flowmetdt2, file = 'data/miroc5flowmetdt2.RData', compress = 'xz')
 
+
+# baseline temperature predictions ----------------------------------------
+
+load(file = '../../Jenny/AirTemp/Modeling/baseline_stream_temp.RData')
+
+bstempmetest <- baseline_stream_temp %>% 
+  filter(year %in% c(1993, 2010, 2014)) %>% 
+  gather('met', 'val', -COMID, -year) %>% 
+  select(
+    met, 
+    COMID, 
+    dts = year, 
+    val
+  )
+
+save(bstempmetest, file = 'data/bstempmetest.RData', compress = 'xz')
+
+# future temperature predictions ------------------------------------------
+
+load(file = '../../Jenny/AirTemp/Modeling/CanESM2_stream_temp.RData')
+load(file = '../../Jenny/AirTemp/Modeling/CCSM4_stream_temp.RData')
+load(file = '../../Jenny/AirTemp/Modeling/MIROC5_stream_temp.RData')
+
+canesm2tempmet <- CanESM2_stream_temp %>% 
+  filter(year %in% c(2040, 2100)) %>% 
+  gather('met', 'val', -COMID, -year) %>% 
+  select(
+    met, 
+    COMID, 
+    dts = year, 
+    val
+  )
+
+ccsm4tempmet <- CCSM4_stream_temp %>% 
+  filter(year %in% c(2040, 2100)) %>% 
+  gather('met', 'val', -COMID, -year) %>% 
+  select(
+    met, 
+    COMID, 
+    dts = year, 
+    val
+  )
+
+miroc5tempmet <- MIROC5_stream_temp %>% 
+  filter(year %in% c(2040, 2100)) %>% 
+  gather('met', 'val', -COMID, -year) %>% 
+  select(
+    met, 
+    COMID, 
+    dts = year, 
+    val
+  )
+
+save(canesm2tempmet, file = 'data/canesm2tempmet.RData', compress = 'xz')
+save(ccsm4tempmet, file = 'data/ccsm4tempmet.RData', compress = 'xz')
+save(miroc5tempmet, file = 'data/miroc5tempmet.RData', compress = 'xz')
