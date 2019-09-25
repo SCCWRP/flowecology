@@ -88,7 +88,7 @@ pal <- colorNumeric(
 )
 
 # species choices
-spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'steelhead trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
+spls <- list('arroyo chub' = 'chub', 'arroyo toad' = 'toad', "least bell's vireo" = 'vireo', 'rainbow/steelhead trout' = 'trout', 'santa ana sucker' = 'sucker', 'southwestern pond turtle' = 'turtle')
 
 # baseline condition choices
 bstypls <- list(`dry (2014)` = '2014', `moderate (2010)` = '2010', `wet (1993)` = '1993')
