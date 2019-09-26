@@ -324,7 +324,7 @@ spmtplt <- reactive({
   req(metsel)
 
   p <- ggplot(spmtdat, aes(x = val, y = as.numeric(occurrbin))) +
-    geom_point(aes(fill = occurrence), size = 4, alpha = 0.7, pch = 21) +
+    geom_point(aes(fill = occurrence), size = 4, alpha = 0.2, pch = 21) +
     scale_fill_manual('Occcurence', values = c('tomato1', 'lightgreen'), drop = FALSE) +
     geom_smooth(method = "glm", method.args = list(family = "binomial"), fullrange = T) +
     theme_bw(base_family = 'serif', base_size = 20) +
@@ -334,7 +334,8 @@ spmtplt <- reactive({
       legend.position = 'top'
       ) +
     ylab('Pr. occurrence') + 
-    xlab(metsel)
+    xlab(metsel) + 
+    guides(fill = guide_legend(override.aes = list(alpha = 1)))
   
   return(p)
   
@@ -1004,7 +1005,8 @@ output$spmtmodtab <- renderUI({
   spmtmod <- spmtmod()
   
   spmtmod %>%
-    stargazer(., type = 'html', dep.var.labels = 'presence/absence') %>% 
+    stargazer(., type = 'html', dep.var.labels = 'presence/absence',
+              omit.stat = c('aic', 'll')) %>% 
     HTML
   
 })
