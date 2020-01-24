@@ -833,6 +833,23 @@ output$dlbsprdstab <- downloadHandler(
   }
 )
 
+# map for baseline metrics
+output$dlbsmetsmap <- downloadHandler(
+  filename = function(){'bsmetsmap.png'},
+  content = function(file){
+    mapshot(x = bsmetsmap(), file = file)
+  }
+)
+
+# map data for baseline metrics
+output$dlbsmetsdat <- downloadHandler(
+  filename = function(){'bsmetsdat.csv'},
+  content = function(file){
+    todl <- bsmetsdat() %>% st_set_geometry(NULL)
+    write.csv(todl, file, quote = T, row.names = F)
+  }
+)
+
 # map for future predictions
 output$dlfutprdsmap <- downloadHandler(
   filename = function(){'futprdsmap.png'},
@@ -1114,7 +1131,7 @@ column(12, tableOutput('bsprdstab') %>% withSpinner())
 
 #### Map metrics
 
-Select either temperature or flow from the prediction type above to select a metric to map.  This map shows the estimated values for the `r renderText({input$bsmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$bsmettyp)])})` metric under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+__Select either temperature or flow from the prediction type above to select a metric to map__.  This map shows the estimated values for the `r renderText({input$bsmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$bsmettyp)])})` metric under baseline `r renderText({names(bstypls)[unlist(bstypls) == as.character(input$bstyp)]})` conditions.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12,
@@ -1223,7 +1240,7 @@ column(12, tableOutput('futprdstab') %>% withSpinner())
 
 #### Map metrics
 
-Select either temperature or flow from the prediction type above to select a metric to map.  This map shows the estimated values for the `r renderText({input$futmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$futmettyp)])})` metric and climate model (`r renderText({input$clmmod})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
+__Select either temperature or flow from the prediction type above to select a metric to map__.  This map shows the estimated values for the `r renderText({input$futmetsel})` `r renderText({tolower(names(mettypls)[unlist(mettypls) == as.character(input$futmettyp)])})` metric and climate model (`r renderText({input$clmmod})`) under future conditions for the year `r renderText({input$futyr})`.  Each stream segment is colored by the metric value. A screenshot of the map or a tabular summary of the data can be downloaded by clicking the buttons below. 
 
 ```{r}
 column(12,
