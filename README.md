@@ -51,3 +51,7 @@ Website [here](https://sccwrp.shinyapps.io/flowecology/)
 * `tmp_tab.csv` tabular data for temperature metric names and definitions
 
 * `wshed.RData` Watershed polygon sf object
+
+### Metadata
+Resources: <a href="https://ftp.sccwrp.org/pub/download/DOCUMENTS/TechnicalReports/1084_ClimateChangeVulnerability.pdf">report</a><br>
+Contact: <a href="https://www.sccwrp.org/about/staff/eric-stein/">Eric Stein</a>, <a href="mailto:jennyt@sccrwp.org">Jenny Taylor</a><br>
